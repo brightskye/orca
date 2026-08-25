@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:orca:phase7:curator-intake:v1",
+  "title": "Orca Phase 7 Curator intake v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_version", "integration", "intake_id", "event_id",
+    "batch_id", "transport_state", "phase6", "candidate",
+    "prior_dispositions", "freshness", "curator_contract"
+  ],
+  "properties": {
+    "schema": {"const": "orca-phase7-curator-intake"},
+    "schema_version": {"const": 1},
+    "integration": {"const": {"name": "orca-cairn-curator-intake", "version": "0.1.4"}},
+    "intake_id": {"type": "string", "pattern": "^phase7-intake:[0-9a-f]{64}$"},
+    "event_id": {"type": "string", "pattern": "^phase7-event:[0-9a-f]{64}$"},
+    "batch_id": {"type": "string", "pattern": "^phase7-batch:[0-9a-f]{64}$"},
+    "transport_state": {"const": "received"},
+    "phase6": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["adapter", "delta_schema", "delta_schema_version", "source_store", "checkpoint"],
+      "properties": {
+        "adapter": {"const": {"name": "orca-cairn-delta", "version": "0.1.2"}},
+        "delta_schema": {"const": "orca-cairn-delta-result"},
+        "delta_schema_version": {"const": 1},
+        "source_store": {
+          "type": "object", "additionalProperties": false,
+          "required": ["id", "harness", "default_intent"],
+          "properties": {
+            "id": {"type": "string", "minLength": 1},
+            "harness": {"type": "string", "minLength": 1},
+            "default_intent": {"enum": ["explicit", "implicit"]}
+          }
+        },
+        "checkpoint": {
+          "type": "object", "additionalProperties": false,
+          "required": ["previous_id", "current_id", "initial_discovery"],
+          "properties": {
+            "previous_id": {"type": ["string", "null"], "pattern": "^phase6:[0-9a-f]{64}$"},
+            "current_id": {"type": "string", "pattern": "^phase6:[0-9a-f]{64}$"},
+            "initial_discovery": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "candidate": {
+      "type": "object", "additionalProperties": false,
+      "required": ["identity", "change", "previous_revision", "current_revision", "content", "source_reference", "previous_source_reference", "sources", "provenance", "intent", "entry_mode", "authority", "orca_state", "removal_semantics"],
+      "properties": {
+        "identity": {"type": "string", "minLength": 1},
+        "change": {"enum": ["added", "changed", "deleted"]},
+        "previous_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "current_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "content": {"type": ["string", "null"]},
+        "source_reference": {"type": ["string", "null"]},
+        "previous_source_reference": {"type": ["string", "null"]},
+        "sources": {"type": "array", "minItems": 1, "items": {"type": "object"}},
+        "provenance": {"type": "object"},
+        "intent": {"enum": ["explicit", "implicit"]},
+        "entry_mode": {"enum": ["explicit", "implicit", "conversational", "source", "reflection"]},
+        "authority": {"const": "candidate"},
+        "orca_state": {"const": "new"},
+        "removal_semantics": {"type": ["string", "null"]}
+      }
+    },
+    "prior_dispositions": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["event_id", "plan_id", "disposition_id", "disposition_reference"],
+        "properties": {
+          "event_id": {"type": "string", "pattern": "^phase7-event:[0-9a-f]{64}$"},
+          "plan_id": {"type": "string", "pattern": "^phase7-plan:[0-9a-f]{64}$"},
+          "disposition_id": {"type": "string", "pattern": "^phase7-disposition:[0-9a-f]{64}$"},
+          "disposition_reference": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "freshness": {
+      "type": "object",
+      "required": ["status", "expected_state", "observed_state", "expected_revision", "observed_revision", "reason", "checked_at", "checker"],
+      "additionalProperties": false,
+      "properties": {
+        "status": {"const": "fresh"},
+        "expected_state": {"enum": ["present", "absent"]},
+        "observed_state": {"enum": ["present", "absent"]},
+        "expected_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "observed_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{64}$"},
+        "reason": {"type": "string", "minLength": 1},
+        "checked_at": {"type": "string", "minLength": 1},
+        "checker": {"type": "string", "minLength": 1}
+      }
+    },
+    "curator_contract": {
+      "const": {
+        "workflow": "inspect -> plan -> apply",
+        "skill": "orca-curator/0.2",
+        "semantic_judgment": "required",
+        "automatic_apply": false,
+        "canonical_deletion_from_source_removal": false
+      }
+    }
+  }
+}

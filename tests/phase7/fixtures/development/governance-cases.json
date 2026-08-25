@@ -1,0 +1,11 @@
+{
+  "distinct": {"comparison": "new distinct knowledge", "disposition": "promoted", "action": "write_markdown"},
+  "exact_duplicate": {"comparison": "exact duplicate", "disposition": "consumed", "action": "none"},
+  "semantic_duplicate": {"comparison": "semantic duplicate", "disposition": "consumed", "action": "none"},
+  "rejection": {"comparison": "unsupported", "disposition": "rejected", "action": "none"},
+  "merge": {"comparison": "supported refinement", "disposition": "merged", "action": "write_markdown"},
+  "promotion_plan": {"comparison": "new distinct knowledge", "disposition": "promoted", "action": "write_markdown"},
+  "correction_plan": {"comparison": "correction", "disposition": "merged", "action": "write_markdown", "authority": "human"},
+  "supersession_plan": {"comparison": "current candidate supersedes prior candidate", "disposition": "promoted", "prior_disposition": "superseded", "action": "write_markdown", "authority": "human"},
+  "source_removal": {"comparison": "source candidate removed", "disposition": "consumed", "action": "none"}
+}

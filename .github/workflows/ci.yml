@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  prototype-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Run focused tests
+        env:
+          CAIRN_LOCK_DIR: ${{ runner.temp }}/orca-locks
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+        run: >-
+          uv run --with agentcairn==0.25.2 python -m unittest
+          tests/integration/test_integration_adapter.py
+          tests/phase6/test_cairn_delta_adapter.py
+          tests/phase7/test_curator_delta_intake.py

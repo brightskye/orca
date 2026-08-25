@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:orca:phase7:processing-state:v2",
+  "title": "Orca Phase 7 operational processing state v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "integration", "source_store", "events"],
+  "properties": {
+    "schema": {"const": "orca-phase7-processing-state"},
+    "schema_version": {"const": 2},
+    "integration": {
+      "const": {"name": "orca-cairn-curator-intake", "version": "0.1.4"}
+    },
+    "source_store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "harness", "default_intent"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "harness": {"type": "string", "minLength": 1},
+        "default_intent": {"enum": ["explicit", "implicit"]}
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/event"}
+    }
+  },
+  "$defs": {
+    "event": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "event_id", "batch_id", "permalink", "change", "record_sha256", "status",
+        "attempt_references", "intake_reference", "plan_id", "plan_reference",
+        "disposition_id", "disposition_reference", "canonical_effect"
+      ],
+      "properties": {
+        "event_id": {"type": "string", "pattern": "^phase7-event:[0-9a-f]{64}$"},
+        "batch_id": {"type": "string", "pattern": "^phase7-batch:[0-9a-f]{64}$"},
+        "permalink": {"type": "string", "minLength": 1},
+        "change": {"enum": ["added", "changed", "deleted"]},
+        "record_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "status": {"enum": ["received", "stale", "planned", "applied", "failed", "indeterminate"]},
+        "attempt_references": {"type": "array", "items": {"$ref": "#/$defs/artifactReference"}},
+        "intake_reference": {"oneOf": [{"$ref": "#/$defs/artifactReference"}, {"type": "null"}]},
+        "plan_id": {"type": ["string", "null"], "pattern": "^phase7-plan:[0-9a-f]{64}$"},
+        "plan_reference": {"oneOf": [{"$ref": "#/$defs/artifactReference"}, {"type": "null"}]},
+        "disposition_id": {"type": ["string", "null"], "pattern": "^phase7-disposition:[0-9a-f]{64}$"},
+        "disposition_reference": {"oneOf": [{"$ref": "#/$defs/artifactReference"}, {"type": "null"}]},
+        "canonical_effect": {"type": ["object", "null"]}
+      }
+    },
+    "artifactReference": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?![A-Za-z]:)(?![\\\\/])(?!.*\\\\)(?!.*(?:^|/)\\.\\.?($|/))[^/]+(?:/[^/]+)*$"
+    }
+  }
+}

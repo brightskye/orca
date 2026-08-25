@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:orca:phase6:checkpoint:v1",
+  "title": "Orca Cairn checkpoint v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "adapter",
+    "source_store",
+    "checkpoint_id",
+    "completed_at",
+    "entries"
+  ],
+  "properties": {
+    "schema": {"const": "orca-cairn-checkpoint"},
+    "schema_version": {"const": 1},
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": {"const": "orca-cairn-delta"},
+        "version": {"const": "0.1.2"}
+      }
+    },
+    "source_store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "harness", "default_intent"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "harness": {"type": "string", "minLength": 1},
+        "default_intent": {"enum": ["explicit", "implicit"]}
+      }
+    },
+    "checkpoint_id": {"type": "string", "pattern": "^phase6:[0-9a-f]{64}$"},
+    "completed_at": {"type": "string", "minLength": 1},
+    "entries": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "content_sha256",
+        "source_reference",
+        "source_session",
+        "last_seen_at",
+        "provenance"
+      ],
+      "properties": {
+        "content_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "source_reference": {"type": "string"},
+        "source_session": {"type": ["string", "null"]},
+        "last_seen_at": {"type": "string", "minLength": 1},
+        "provenance": {
+          "type": "object",
+          "additionalProperties": {"type": "string"}
+        }
+      }
+    }
+  }
+}

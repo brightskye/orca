@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:orca:phase7:apply-authorization:v1",
+  "title": "Orca Phase 7 explicit local apply authorization v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_version", "plan_id", "approved", "actor", "authority", "scope"],
+  "properties": {
+    "schema": {"const": "orca-phase7-apply-authorization"},
+    "schema_version": {"const": 1},
+    "plan_id": {"type": "string", "pattern": "^phase7-plan:[0-9a-f]{64}$"},
+    "approved": {"const": true},
+    "actor": {"type": "string", "minLength": 1},
+    "authority": {"enum": ["curator", "human"]},
+    "scope": {"const": "phase7-fixture-or-explicit-local-plan"}
+  }
+}

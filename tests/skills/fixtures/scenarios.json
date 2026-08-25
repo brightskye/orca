@@ -1,0 +1,170 @@
+{
+  "capture": {
+    "C1": {
+      "result": {
+        "content": "Example uses local STT.",
+        "authority": "candidate",
+        "orca_state": "new",
+        "intent": "explicit",
+        "sources": [{"id": "c1-request", "resource": "memory://fixture/c1", "author": "human:owner"}],
+        "applicability": {"scope": "project-specific", "project": "Example"},
+        "retention": {"class": "durable"}
+      }
+    },
+    "C2": {
+      "result": {
+        "content": "Owner prefers concise daily summaries.",
+        "authority": "candidate",
+        "orca_state": "new",
+        "intent": "explicit",
+        "attribution": {"speaker": "Owner", "holder": "Owner", "mode": "asserted", "speaker_stance": "endorsed"},
+        "sources": [{"id": "c2-request", "resource": "memory://fixture/c2", "author": "human:owner"}]
+      }
+    },
+    "C3": {
+      "result": {
+        "content": "For Example, keep today's logs until Friday.",
+        "authority": "candidate",
+        "orca_state": "new",
+        "intent": "explicit",
+        "candidate_type": "working_context",
+        "applicability": {"scope": "project-specific", "project": "Example"},
+        "retention": {"class": "temporary", "valid_until": "2026-08-28T23:59:59+08:00"},
+        "sources": [{"id": "c3-request", "resource": "memory://fixture/c3", "author": "human:owner"}]
+      }
+    },
+    "C4": {
+      "result": {
+        "content": "Remember this possibly useful observation.",
+        "authority": "candidate",
+        "orca_state": "new",
+        "intent": "explicit",
+        "candidate_type": null,
+        "applicability": null,
+        "uncertainty": ["meaning", "truth", "destination"],
+        "sources": [{"id": "c4-request", "resource": "memory://fixture/c4", "author": "human:owner"}]
+      }
+    }
+  },
+  "curator": {
+    "K1": {
+      "comparison": "new distinct knowledge",
+      "disposition": "promoted",
+      "canonical_target": "Projects/Example/new-distinct.md",
+      "source_preserved": true
+    },
+    "K2": {
+      "comparison": "exact duplicate",
+      "disposition": "consumed",
+      "canonical_target": "Projects/Example/current.md",
+      "canonical_changed": false,
+      "routine_log_written": false
+    },
+    "K3": {
+      "comparison": "semantic duplicate",
+      "semantic_judgment": "governed",
+      "disposition": "consumed",
+      "canonical_target": "Projects/Example/current.md",
+      "canonical_changed": false
+    },
+    "K4": {
+      "comparison": "correction",
+      "disposition": "merged",
+      "old_evidence": "memory://fixture/k4-old",
+      "new_evidence": "memory://fixture/k4-new",
+      "relation": {"type": "revises", "target": "Projects/Example/current.md"},
+      "history_preserved": true
+    },
+    "K5": {
+      "comparison": "supersession",
+      "disposition": "promoted",
+      "old_canonical": "Projects/Example/historical.md",
+      "old_status": "deprecated",
+      "current_target": "Projects/Example/current.md",
+      "relation": {"type": "supersedes", "target": "Projects/Example/historical.md"},
+      "history_preserved": true
+    },
+    "K6": {
+      "comparison": "unsupported",
+      "disposition": "rejected",
+      "reason": "Original evidence does not support the proposition.",
+      "source_preserved": true,
+      "authoritative_recall": false
+    },
+    "K7": {
+      "comparison": "correction",
+      "disposition": "merged",
+      "human_correction": {"explicit": true, "actor": "human:owner", "source": "memory://fixture/k7-correction", "evidence_weight": "strong"},
+      "old_evidence": "memory://fixture/k7-old",
+      "current_interpretation": "Architecture reviews should be detailed.",
+      "relation": {"type": "supersedes", "target": "Projects/Example/historical.md"}
+    },
+    "K8": {
+      "input_kind": "raw-source-candidate",
+      "cairn_required": false,
+      "source": "Raw/sources/source-s1.md",
+      "disposition": "promoted",
+      "canonical_target": "Projects/Example/current.md"
+    }
+  },
+  "source_ingestion": {
+    "S1": {
+      "original": "Raw/sources/source-s1.md",
+      "original_preserved": true
+    },
+    "S2": {
+      "derived_candidate": "Inbox/candidate-correction.md",
+      "derived_from": "Raw/sources/source-s1.md"
+    },
+    "S3": {
+      "curator_handoff": "Inbox/curator-disposition.md",
+      "cairn_required": false
+    },
+    "S4": {
+      "ingested_authority": "candidate",
+      "orca_state_before_curator": "new",
+      "automatic_canonical_write": false
+    }
+  },
+  "recall": {
+    "R1": {
+      "authority": "CANONICAL",
+      "path": "Projects/Example/current.md",
+      "current": true,
+      "provenance": "Raw/sources/source-s1.md"
+    },
+    "R2": {
+      "authority": "CANDIDATE",
+      "path": "Inbox/candidate-correction.md",
+      "orca_state": "new",
+      "canonical": false
+    },
+    "R3": {
+      "canonical_authority": "CANONICAL",
+      "candidate_authority": "CANDIDATE",
+      "canonical_preferred": true,
+      "conflict_surfaced": true,
+      "curator_review_recommended": true
+    },
+    "R4": {
+      "current": "Projects/Example/current.md",
+      "historical": "Projects/Example/historical.md",
+      "historical_authority": "HISTORICAL / SUPERSEDED",
+      "current_preferred": true
+    },
+    "R5": {
+      "result": "Projects/Example/current.md",
+      "source": "Raw/sources/source-s1.md",
+      "provenance_visible": true
+    }
+  },
+  "replayability": {
+    "source": "Raw/sources/source-s1.md",
+    "candidate": "Inbox/candidate-correction.md",
+    "disposition": "Inbox/curator-disposition.md",
+    "canonical_target": "Projects/Example/current.md",
+    "prior_canonical": "Projects/Example/historical.md",
+    "relation": "supersedes",
+    "human_correction_source": "memory://fixture/k7-correction"
+  }
+}
