@@ -2,9 +2,9 @@
 
 ## Supported state
 
-Orca Memory is currently an architecture and manual prototype. It is not a
-publicly supported network service, and canonical automatic apply remains
-disabled.
+Orca Memory has an active but incomplete Phase 1 local implementation. It is not
+deployed or offered as a publicly supported service, and canonical automatic
+apply remains disabled.
 
 ## Reporting a vulnerability
 
@@ -13,12 +13,12 @@ reporting for `brightskye/orca`. Do not open a public issue containing secrets,
 personal memory, vault contents, connector records, host paths, or exploit
 details that expose a deployed system.
 
-## Deployment boundary
+## Security and privacy boundaries
 
-- Keep MCP access local through stdio or another explicitly authenticated,
-  private transport.
-- Do not expose administrative, curation, ingestion, scheduler, or canonical
-  apply interfaces directly to the public Internet.
-- Keep credentials and machine-local configuration outside Git.
-- Treat conversation evidence, shallow memory, candidates, and runtime state as
-  private data even when they are noncanonical.
+Accepted assets, trust boundaries, threats, deployment restrictions, secret
+containment, logging, and residual risks are defined by [Security and
+Trust](docs/02-architecture/security-and-trust.md). Exact privacy and authority
+behavior remains governed by the [Memory System
+Contract](docs/governance/memory-system-contract.md). See [Current
+Status](docs/STATUS.md) for implementation gaps; documented design is not proof
+of deployed protection.

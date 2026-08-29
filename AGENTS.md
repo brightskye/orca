@@ -2,16 +2,36 @@
 
 ## Scope
 
-This repository owns the Orca Memory System implementation, tests, technical
-documentation, deployment assets, and engineering history. The configured Orca
-vault owns memory data. Keep project source and vault content separate.
+This repository owns the active Phase 1 Orca Memory implementation and its
+supporting documentation. The configured Orca vault owns memory data. Historical
+prototype source and tests live under `legacy/`.
 
 ## Authority
 
+- When `.agent-notes/` exists, read `.agent-notes/current.md` before resuming
+  ongoing work and update the relevant note when project state materially changes.
+- Read `docs/README.md` when locating the document that owns a rule or lifecycle.
+- Read `docs/STATUS.md` before claiming a capability is implemented, verified,
+  deployed, or ready.
+- Read `docs/ROADMAP.md` when changing phase scope, entry conditions, or exit
+  criteria.
 - Read `CONTEXT.md` when changing domain language or module boundaries.
-- Read `docs/architecture.md` for system structure and deployment topology.
+- Read `docs/02-architecture/overview.md` for the active Phase 1 system structure.
 - Read `docs/governance/memory-system-contract.md` before changing authority,
-  lifecycle, curation, privacy, or canonical-apply behavior.
+  privacy, capture, processing, recall, or canonical behavior.
+- Read `docs/03-specifications/memory-model.md` before changing memory kinds,
+  subjects, filenames, record placement, lifecycle, or Storage naming behavior.
+- Read `docs/03-specifications/knowledge-candidates.md` before changing ordinary
+  candidate schema, placement, review, retention, or disposition behavior.
+- Read `docs/03-specifications/configuration.md` before changing host or vault
+  configuration fields, defaults, validation, or precedence.
+- Read `docs/07-quality/test-strategy.md` before changing tests, fixtures, CI,
+  or verification commands. Read `docs/07-quality/acceptance.md` before making
+  a Phase 1 acceptance claim.
+- Read `docs/08-operations/runbook.md` before executing or documenting an
+  operator procedure.
+- Read `legacy/README.md` only when a task explicitly targets prototype
+  behavior, historical comparison, or legacy migration.
 - Treat `evidence/` and `index.md` as local historical records. Preserve their
   content, IDs, and hashes unless a task explicitly authorizes a historical
   correction. They must remain outside the public Git repository.
@@ -19,30 +39,24 @@ vault owns memory data. Keep project source and vault content separate.
 ## Working rules
 
 - Implement the smallest structural change that satisfies the current task.
-- Keep AgentCairn replaceable and Orca authoritative.
-- Keep candidates, shallow memory, and source evidence noncanonical.
-- Keep canonical apply disabled unless a task explicitly grants the required
-  scope and the governance gates pass.
+- Keep the retrieval backend replaceable and Orca authoritative.
+- Keep conversation evidence, candidates, and shallow memory noncanonical.
+- Keep canonical apply disabled and unexposed in Phase 1.
 - Load the vault path from local `config/host.yaml` or `ORCA_VAULT_PATH`; never
   hard-code a personal vault path in tracked source.
 - Keep `config/host.yaml`, `.runtime/`, credentials, secrets, private memory,
   and generated dependency caches out of Git.
-- Preserve the current manual prototype under `prototype/` until
-  a separately verified cutover retires it.
+- Preserve the historical package under `legacy/`; it does not define active
+  Phase 1 behavior.
 
 ## Verification
 
-Run the focused prototype suite after changing the prototype or its
-tests:
+Run the active Phase 1 suite after changing implementation or tests:
 
 ```bash
 UV_CACHE_DIR=/tmp/orca-uv-cache \
-CAIRN_LOCK_DIR=/tmp/orca-locks \
-uv run --with agentcairn==0.25.2 python -m unittest \
-  tests/integration/test_integration_adapter.py \
-  tests/phase6/test_cairn_delta_adapter.py \
-  tests/phase7/test_curator_delta_intake.py
+uv run --extra agentcairn python -m unittest \
+  tests/conversation/test_codex_capture.py \
+  tests/step3/test_pipeline.py \
+  tests/agentcairn/test_distiller.py
 ```
-
-Run `tests/skills/test_phase4_skills.py` only where the configured vault
-contains the transitional Orca skills.

@@ -1,0 +1,26 @@
+%% Title: Orca Phase 1 Processing Flow
+%% Scope: Accepted intended processing and recovery order; implementation is partial.
+flowchart TD
+    Event[PreCompact, SessionEnd, or explicit save]
+    Handoff[Bounded deterministic handoff]
+    Queue[Queue work and trigger one-shot worker]
+    Source[Read agent source or secure retry spool]
+    Normalize[Identify, filter, redact, normalize, and hash]
+    Dedupe{Successful source already in Run Manifests?}
+    Skip[Skip semantic work or repair checkpoint]
+    Bound[Build bounded chronological provider input]
+    Propose[Semantic provider proposes controlled output]
+    Validate{Deterministic validation passes?}
+    Retry[Publish nothing; leave checkpoint unchanged]
+    Publish[Publish validated derived artifacts]
+    Manifest[Publish durable Run Manifest]
+    Checkpoint[Advance checkpoint last]
+    Reconcile[Reconcile disposable retrieval projections]
+    Available[Available to later explicit recall]
+
+    Event --> Handoff --> Queue --> Source --> Normalize --> Dedupe
+    Dedupe -->|yes| Skip --> Checkpoint
+    Dedupe -->|no| Bound --> Propose --> Validate
+    Validate -->|no| Retry
+    Validate -->|yes| Publish --> Manifest --> Checkpoint
+    Checkpoint --> Reconcile --> Available

@@ -1,0 +1,42 @@
+%% Title: Orca Phase 1 System Context
+%% Scope: Accepted intended Phase 1 architecture; implementation status is documented separately.
+flowchart LR
+    Owner[Owner]
+    Codex[Codex Desktop]
+    Provider[Semantic Provider]
+
+    subgraph Host[Local Host Boundary]
+        subgraph WSL[WSL Runtime]
+            Connector[Codex Connector]
+            Processor[Processor]
+            Governance[Governance]
+            Storage[Storage]
+            Recall[Recall]
+            Adapter[Retrieval Adapter]
+            Runtime[(Local Runtime State)]
+        end
+
+        subgraph Vault[Configured Orca Vault]
+            Canonical[(Canonical Memory)]
+            Shallow[(Shallow Memory)]
+            Candidates[(Candidates)]
+            Profiles[(Interaction Profiles)]
+            Manifests[(Run Manifests)]
+        end
+    end
+
+    Codex -->|supported source records| Connector
+    Connector -->|permitted redacted evidence| Processor
+    Processor <-->|bounded input and untrusted proposals| Provider
+    Processor --> Governance
+    Governance --> Storage
+    Storage --> Shallow
+    Storage --> Candidates
+    Storage --> Profiles
+    Storage --> Manifests
+    Storage --> Runtime
+    Canonical --> Adapter
+    Shallow --> Adapter
+    Adapter --> Recall
+    Recall -->|bounded authority-labelled context| Codex
+    Owner -->|governed human acceptance only| Canonical

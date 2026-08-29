@@ -1,5 +1,10 @@
+# Accepted Phase 1 fixture; see docs/03-specifications/configuration.md.
 schema_version: 1
 host_id: replace-with-unique-host-id
 runtime: wsl
 vault_path: /absolute/path/to/Orca
 runtime_path: /workspace/projects/orca/.runtime
+connectors:
+  codex:
+    rollout_store: /absolute/path/to/Codex/rollouts
+project_root_mappings: []

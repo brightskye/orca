@@ -1,6 +1,7 @@
 config/host.yaml
 .runtime/
 .venv/
+.agent-notes/
 __pycache__/
 *.pyc
 

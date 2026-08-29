@@ -1,0 +1,37 @@
+# Accepted Phase 1 fixture; see docs/03-specifications/configuration.md.
+schema_version: orca-memory-config/0.1
+provider:
+  adapter: replace-with-registered-adapter-id
+  model: replace-with-model-id
+cadence:
+  catch_up_minutes: 15
+  index_reconcile_minutes: 15
+privacy:
+  redaction_policy: orca-secret-containment/0.1
+processing:
+  processor_policy: orca-processor/0.1
+retry:
+  max_attempts: 3
+  retention_hours: 72
+interaction:
+  observation_policy: interaction-observation/1
+  aggregation_policy: interaction-aggregation/1
+  guidance_policy: interaction-guidance/1
+budgets:
+  processor:
+    model_window_tokens: 32768
+    input_tokens: 20000
+    output_tokens: 4000
+    new_evidence_tokens: 8000
+    preceding_overlap_tokens: 1000
+    continuation_summary_tokens: 2000
+    project_summary_tokens: 2000
+    related_records_tokens: 5000
+    max_related_records: 5
+  recall:
+    total_tokens: 4000
+    per_document_tokens: 1500
+    exact_continuation_tokens: 2000
+    max_results: 6
+  interaction:
+    auto_load_tokens: 500

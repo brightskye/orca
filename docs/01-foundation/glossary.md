@@ -1,10 +1,33 @@
-# Orca Memory
+---
+id: GLOSSARY-ORCA
+title: Orca Glossary
+document_type: glossary
+status: accepted
+authority: normative
+implementation_status: not-applicable
+applies_to:
+  - phase-1
+owners:
+  - project-owner
+last_reviewed: 2026-08-29
+---
 
-> [!NOTE]
-> The canonical glossary is now
-> [`docs/01-foundation/glossary.md`](docs/01-foundation/glossary.md). This
-> definition-complete mirror remains temporarily for agent compatibility during
-> the PDS migration and must not be edited independently.
+# Orca glossary
+
+## Purpose
+
+This document defines Orca's canonical project-specific terminology and avoided
+synonyms.
+
+## This document owns
+
+- Names and concise definitions for Orca domain concepts.
+
+## This document does not own
+
+- Exact behavior, schemas, lifecycle transitions, or implementation status.
+
+# Orca Memory
 
 Orca Memory turns supported Codex conversations into governed local context
 without confusing provisional evidence with accepted durable knowledge.
@@ -254,3 +277,10 @@ _Avoid_: connector, retrieval backend
 An immutable record binding one processing run to its inputs, outputs,
 configuration, provider, status, and failures.
 _Avoid_: summary, log
+
+## Related documents
+
+- **Documentation map:** [Documentation Index](../README.md)
+- **Requirements:** [Requirements](requirements.md)
+- **Exact behavior:** [Memory System Contract](../governance/memory-system-contract.md)
+- **Current implementation state:** [Current Status](../STATUS.md)
