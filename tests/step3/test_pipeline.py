@@ -1,0 +1,190 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
+import json
+from pathlib import Path
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from orca_memory.conversation import ConversationBatch, NormalizedTurn
+from orca_memory.pipeline import Step3Pipeline
+from orca_memory.processor import ContinuationSummary, ProcessingProposal, Processor
+from orca_memory.storage import MemoryScope, Storage
+
+
+class FakeProvider:
+    name = "fake-semantic-provider/1"
+
+    def __init__(self, proposal: ProcessingProposal) -> None:
+        self.proposal = proposal
+        self.calls = 0
+        self.requests = []
+
+    def distill(self, request):
+        self.calls += 1
+        self.requests.append(request)
+        return self.proposal
+
+
+def _batch(*, text_hash: str = "hash-1") -> ConversationBatch:
+    turn = NormalizedTurn(
+        connector_id="codex-local",
+        conversation_id="conversation-123",
+        turn_id="turn-1",
+        occurred_at="2026-08-29T10:00:00Z",
+        source_uri="codex://session/conversation-123/event/turn-1",
+        text="Design the Step 3 pipeline.",
+        content_sha256=text_hash,
+    )
+    return ConversationBatch("codex-local", "conversation-123", (turn,))
+
+
+def _summary(*, state: str = "The publication flow is accepted.") -> ContinuationSummary:
+    return ContinuationSummary(
+        purpose="Step 3 memory implementation",
+        current_state=state,
+        important_outcomes=("Continuation Summary is a structural artifact.",),
+        next_steps=("Implement typed memory records.",),
+    )
+
+
+class Step3PipelineTests(unittest.TestCase):
+    def _storage(self, root: Path) -> Storage:
+        return Storage(
+            root / "vault",
+            root / "runtime",
+            clock=lambda: datetime(2026, 8, 29, 12, 0, tzinfo=timezone.utc),
+            id_factory=lambda: "fixed-run-id",
+        )
+
+    def test_publishes_continuation_manifest_then_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            storage = self._storage(root)
+            result = Step3Pipeline(Processor(provider), storage).run(
+                _batch(),
+                scope=MemoryScope("project", "project-1", "Orca"),
+            )
+
+            self.assertEqual(result.status, "success")
+            self.assertEqual(provider.calls, 1)
+            self.assertEqual(len(result.output_paths), 1)
+            summary_path = result.output_paths[0]
+            self.assertEqual(summary_path.parent.name, "conversation-summaries")
+            self.assertEqual(summary_path.parent.parent.name, "orca")
+            summary_text = summary_path.read_text(encoding="utf-8")
+            self.assertIn("schema_version: orca-conversation-continuation/1", summary_text)
+            self.assertIn('conversation_id: "conversation-123"', summary_text)
+            self.assertIn('project_id: "project-1"', summary_text)
+            self.assertIn("## Current state", summary_text)
+
+            self.assertIsNotNone(result.manifest_path)
+            manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["schema_version"], "orca-run-manifest/0.1")
+            self.assertEqual(manifest["status"], "success")
+            self.assertEqual(manifest["sources"][0]["turn_id"], "turn-1")
+            self.assertEqual(manifest["outputs"][0]["sha256"], _sha256(summary_path))
+
+            checkpoints = list((root / "runtime" / "checkpoints").glob("**/*.json"))
+            self.assertEqual(len(checkpoints), 1)
+            checkpoint = json.loads(checkpoints[0].read_text(encoding="utf-8"))
+            self.assertEqual(checkpoint["processed_through_turn"], "turn-1")
+            self.assertEqual(
+                checkpoint["manifest_path"],
+                result.manifest_path.relative_to(root / "vault").as_posix(),
+            )
+
+    def test_manifest_replay_skips_provider_and_repairs_missing_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            pipeline = Step3Pipeline(Processor(provider), self._storage(root))
+            first = pipeline.run(
+                _batch(), scope=MemoryScope("unassigned", "unassigned")
+            )
+            checkpoints = list((root / "runtime" / "checkpoints").glob("**/*.json"))
+            checkpoints[0].unlink()
+
+            replay = pipeline.run(
+                _batch(), scope=MemoryScope("unassigned", "unassigned")
+            )
+
+            self.assertEqual(first.status, "success")
+            self.assertEqual(replay.status, "replay")
+            self.assertEqual(provider.calls, 1)
+            self.assertEqual(len(list((root / "runtime" / "checkpoints").glob("**/*.json"))), 1)
+
+    def test_manifest_allows_recovery_when_checkpoint_write_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            storage = self._storage(root)
+            pipeline = Step3Pipeline(Processor(provider), storage)
+            with patch.object(storage, "_write_checkpoint", side_effect=OSError("disk full")):
+                with self.assertRaisesRegex(OSError, "disk full"):
+                    pipeline.run(
+                        _batch(), scope=MemoryScope("general", "general")
+                    )
+
+            manifests = list((root / "vault").glob("**/manifests/**/*.json"))
+            self.assertEqual(len(manifests), 1)
+            replay = pipeline.run(
+                _batch(), scope=MemoryScope("general", "general")
+            )
+            self.assertEqual(replay.status, "replay")
+            self.assertEqual(provider.calls, 1)
+
+    def test_no_memory_still_publishes_manifest_and_checkpoint(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(ProcessingProposal(None))
+            result = Step3Pipeline(Processor(provider), self._storage(root)).run(
+                _batch(), scope=MemoryScope("general", "general")
+            )
+
+            self.assertEqual(result.status, "no_memory")
+            self.assertEqual(result.output_paths, ())
+            manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(manifest["status"], "no_memory")
+            self.assertEqual(manifest["outputs"], [])
+            self.assertEqual(len(list((root / "runtime").glob("**/*.json"))), 1)
+
+    def test_secret_in_semantic_output_fails_before_publication(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(
+                ProcessingProposal(_summary(state="Use api_key=unredacted-value."))
+            )
+            with self.assertRaisesRegex(ValueError, "credential-like"):
+                Step3Pipeline(Processor(provider), self._storage(root)).run(
+                    _batch(), scope=MemoryScope("general", "general")
+                )
+
+            self.assertFalse((root / "vault").exists())
+            self.assertFalse((root / "runtime").exists())
+
+    def test_known_turn_with_different_hash_fails_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            pipeline = Step3Pipeline(Processor(provider), self._storage(root))
+            pipeline.run(_batch(), scope=MemoryScope("general", "general"))
+
+            with self.assertRaisesRegex(ValueError, "source revision"):
+                pipeline.run(
+                    _batch(text_hash="changed-hash"),
+                    scope=MemoryScope("general", "general"),
+                )
+            self.assertEqual(provider.calls, 1)
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+if __name__ == "__main__":
+    unittest.main()
