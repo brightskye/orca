@@ -145,8 +145,10 @@ Scenario definitions and verdicts remain in the
 | `tests/step3/test_provenance.py` | 5 | AGENTS and CI | Manifest/checkpoint `0.2`, mixed `0.1` reads, segment sequence, strict joins, exact replay, and conflict detection |
 | `tests/step3/test_publication.py` | 5 | AGENTS and CI | Intent/artifact/Manifest/checkpoint order, fault recovery, mismatch, and path containment |
 | `tests/agentcairn/test_distiller.py` | 3 | AGENTS and CI | Prevalidated Distiller seam and fail-closed unknown/canonical cases |
+| `tests/interaction/test_interaction.py` | 12 | AGENTS and CI | Controlled observations, abstention, activation, conflict, replacement, expiry, scope precedence, overrides, and exact bounded templates |
+| `tests/interaction/test_pipeline.py` | 2 | AGENTS and CI | Exact-source Manifest admission, content-free abstention, replay, profile rebuild, text exclusion, and deterministic selection |
 
-This 103-test inventory is a current regression baseline, not the complete Phase
+This 117-test inventory is a current regression baseline, not the complete Phase
 1 suite and not end-to-end acceptance.
 
 ## Current and target commands
@@ -171,10 +173,12 @@ uv run --extra agentcairn python -m unittest \
   tests/step3/test_outcomes.py \
   tests/step3/test_provenance.py \
   tests/step3/test_publication.py \
+  tests/interaction/test_interaction.py \
+  tests/interaction/test_pipeline.py \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 103 current tests on 2026-08-30. That verifies the
+This exact command passed all 117 current tests on 2026-08-30. That verifies the
 command and current regression baseline only; it does not satisfy the complete
 Phase 1 acceptance scenarios.
 

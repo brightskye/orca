@@ -56,7 +56,7 @@ was accepted and promoted on 2026-08-30.
 | AgentCairn prevalidated Distiller seam | Partial | Adapter and focused tests exist; it is not wired into the Processor |
 | Typed Memory Records, Project Summary, and project registration/relink | Implemented | Validated records, add/support/update, summary refresh, exact-worktree resolution, and recoverable mapping tests |
 | Knowledge Candidates, supersession, conflict records, and overflow | Implemented | Strict noncanonical schemas, stable variants, Owner-only review/disposition primitives, distinct placement, and joined publication tests |
-| Interaction observations, profiles, and compiled guidance | Planned | Accepted contracts exist; no active implementation |
+| Interaction observations, profiles, and compiled guidance | Implemented | Exact-source Manifest observations, content-free abstentions, rebuildable scoped profiles, lifecycle rules, and fixed bounded guidance selection are directly tested |
 | Recall, MCP surface, skills, and retrieval projections | Planned | Accepted design; no active implementation |
 | Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Partial | Secure redacted spool creation, three-attempt accounting, 72-hour expiry, content-free receipt, and success cleanup are tested library behavior; no hook or worker wiring exists |
 | Orca Status, Attention Items, and session reminder | Planned | Accepted content-free local interface; no active implementation |
@@ -65,8 +65,9 @@ was accepted and promoted on 2026-08-30.
 
 ## Known divergence
 
-- Runtime hooks, secure retry handling, retrieval reconciliation, interaction
-  consolidation, and routine deployment are designed but not implemented.
+- Runtime hooks, retrieval reconciliation, and routine deployment are designed
+  but not implemented. Secure retry primitives and interaction consolidation
+  are implemented library behavior but are not yet wired into a local runtime.
 - Codex's internal rollout format remains non-public. The connector supports the
   accepted Responses-style `final_answer` marker and fails closed on drift, but
   isolated host-format verification remains required before routine use.
@@ -77,9 +78,9 @@ These are implementation gaps, not permission to weaken the accepted contracts.
 
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
-- Phase 1 implementation: Milestones 1 through 3 are implemented and
-  deterministically verified. The next bounded slice is scoped interaction
-  observations, profile lifecycle, and deterministic guidance.
+- Phase 1 implementation: Milestones 1 through 4 are implemented and
+  deterministically verified. The next bounded slice is explicit recall and
+  replaceable retrieval.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
@@ -102,13 +103,13 @@ common-use corpus, 95% overall, 90% per category, zero critical failures, and a
 separate mandatory edge-safety set. Implementation remains planned.
 
 Routine Phase 1 use remains blocked by the planned runtime, retrieval,
-interaction, configuration, deployment, and readiness work listed above.
+retrieval, configuration, deployment, and readiness work listed above.
 
 ## Verification
 
 - Repository and documentation review date: 2026-08-30.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current active regression command passed 103 tests on
+- The complete current active regression command passed 117 tests on
   2026-08-30; it is not Phase 1 end-to-end acceptance.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).

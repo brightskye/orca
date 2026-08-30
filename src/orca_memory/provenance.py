@@ -210,8 +210,16 @@ def validate_manifest(value: dict[str, Any], *, path: Path | None = None) -> Non
     sources = value.get("sources")
     operations = value.get("operations")
     outputs = value.get("outputs")
+    interaction_abstentions = value.get("interaction_abstentions", [])
     if not all(isinstance(group, list) for group in (sources, operations, outputs)):
         raise ValueError(f"invalid Manifest receipt arrays: {label}")
+    if not isinstance(interaction_abstentions, list):
+        raise ValueError(f"invalid Manifest interaction abstentions: {label}")
+    if interaction_abstentions:
+        from orca_memory.interaction import parse_observation_abstention
+
+        for abstention in interaction_abstentions:
+            parse_observation_abstention(abstention)
     source_refs = [item.get("source_ref") for item in sources if isinstance(item, dict)]
     output_refs = [item.get("output_ref") for item in outputs if isinstance(item, dict)]
     operation_ids = [item.get("operation_id") for item in operations if isinstance(item, dict)]
@@ -289,6 +297,27 @@ def validate_manifest(value: dict[str, Any], *, path: Path | None = None) -> Non
         if operation.get("operation") == "observation":
             if not isinstance(embedded, dict):
                 raise ValueError(f"observation lacks embedded artifact: {label}")
+            from orca_memory.interaction import parse_observation
+
+            observation = parse_observation(embedded)
+            if (
+                operation.get("artifact_kind") != "interaction-observation"
+                or operation.get("artifact_id") != observation.observation_id
+                or cited_outputs
+            ):
+                raise ValueError(f"invalid Manifest observation receipt: {label}")
+            cited_turn_ids = {
+                source["turn_id"]
+                for source in sources
+                if source["source_ref"] in cited_sources
+            }
+            expected_turn_ids = {
+                observation.preceding_request_turn_id,
+                observation.feedback_turn_id,
+                *observation.evaluated_assistant_turn_ids,
+            }
+            if cited_turn_ids != expected_turn_ids:
+                raise ValueError(f"observation source joins are not exact: {label}")
         elif embedded is not None:
             raise ValueError(f"unexpected embedded Manifest artifact: {label}")
     status = value.get("status")

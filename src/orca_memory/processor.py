@@ -9,6 +9,12 @@ from typing import Protocol
 from orca_memory.conversation import ConversationBatch, NormalizedTurn
 from orca_memory.candidates import CandidateProposal
 from orca_memory.conflicts import ConflictProposal, SupersedeProposal
+from orca_memory.interaction import (
+    InteractionObservation,
+    ObservationAbstention,
+    ObservationProposal,
+    admit_observation,
+)
 from orca_memory.memory import ProjectSummary, RecordProposal
 from orca_memory.privacy import contains_secret
 from orca_memory.segmentation import (
@@ -60,6 +66,7 @@ class ProcessingProposal:
     conflict_proposals: tuple[ConflictProposal, ...] = ()
     supersede_proposals: tuple[SupersedeProposal, ...] = ()
     abstentions: tuple["Abstention", ...] = ()
+    observation_proposals: tuple[ObservationProposal, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -123,6 +130,8 @@ class ProcessedConversation:
     conflict_proposals: tuple[ConflictProposal, ...]
     supersede_proposals: tuple[SupersedeProposal, ...]
     abstentions: tuple[Abstention, ...]
+    observations: tuple[InteractionObservation, ...]
+    observation_abstentions: tuple[ObservationAbstention, ...]
     provider: str
     policy: str = PROCESSOR_POLICY
 
@@ -229,6 +238,25 @@ class Processor:
                 raise ValueError("supersede proposal crosses resolved scope")
         if not all(isinstance(item, Abstention) for item in proposal.abstentions):
             raise ValueError("semantic provider returned an invalid abstention")
+        admitted_observations: list[InteractionObservation] = []
+        observation_abstentions: list[ObservationAbstention] = []
+        for observation_proposal in proposal.observation_proposals:
+            result = admit_observation(observation_proposal, source_segments)
+            if isinstance(result, InteractionObservation):
+                observation_scope = result.scope
+                unsupported_scope = (
+                    observation_scope.agent_id not in {None, "codex"}
+                    or observation_scope.project_id is not None
+                    and observation_scope.project_id != project_id
+                )
+                if unsupported_scope:
+                    observation_abstentions.append(
+                        ObservationAbstention(result.observation_id, "unsupported-scope")
+                    )
+                else:
+                    admitted_observations.append(result)
+            else:
+                observation_abstentions.append(result)
         if proposal.project_summary is not None:
             if scope_kind != "project" or project_id != scope_id:
                 raise ValueError("Project Summary requires resolved project scope")
@@ -245,6 +273,8 @@ class Processor:
             conflict_proposals=proposal.conflict_proposals,
             supersede_proposals=proposal.supersede_proposals,
             abstentions=proposal.abstentions,
+            observations=tuple(admitted_observations),
+            observation_abstentions=tuple(observation_abstentions),
             provider=self._provider.name,
         )
 

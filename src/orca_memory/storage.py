@@ -39,6 +39,7 @@ from orca_memory.memory import (
     render_record,
     validate_operation,
 )
+from orca_memory.interaction import parse_observation, rebuild_profiles
 from orca_memory.privacy import contains_secret
 from orca_memory.processor import ContinuationSummary, ProcessedConversation
 from orca_memory.provenance import (
@@ -669,6 +670,43 @@ class Storage:
                 }
             )
 
+        source_refs_by_turn: dict[str, list[str]] = {}
+        for source in sources:
+            source_refs_by_turn.setdefault(str(source["turn_id"]), []).append(
+                str(source["source_ref"])
+            )
+        seen_observations: set[str] = set()
+        for observation in processed.observations:
+            if observation.observation_id in seen_observations:
+                continue
+            seen_observations.add(observation.observation_id)
+            cited_turns = {
+                observation.preceding_request_turn_id,
+                observation.feedback_turn_id,
+                *observation.evaluated_assistant_turn_ids,
+            }
+            if not cited_turns.issubset(source_refs_by_turn):
+                raise ValueError("Interaction Observation lacks exact Manifest sources")
+            observation_source_refs = [
+                str(source["source_ref"])
+                for source in sources
+                if source["turn_id"] in cited_turns
+            ]
+            embedded = observation.value_dict()
+            parse_observation(embedded)
+            operations.append(
+                {
+                    "operation_id": f"op-{len(operations) + 1:03d}",
+                    "operation": "observation",
+                    "outcome": "observed",
+                    "artifact_kind": "interaction-observation",
+                    "artifact_id": observation.observation_id,
+                    "source_refs": observation_source_refs,
+                    "output_refs": [],
+                    "embedded_artifact": embedded,
+                }
+            )
+
         status = "success" if operations else "no_memory"
         manifest = {
             "schema": MANIFEST_SCHEMA,
@@ -693,6 +731,9 @@ class Storage:
             "sources": sources,
             "operations": operations,
             "outputs": outputs,
+            "interaction_abstentions": [
+                item.value_dict() for item in processed.observation_abstentions
+            ],
         }
         validate_manifest(manifest)
         manifest_payload = (
@@ -729,6 +770,16 @@ class Storage:
             ),
             fault=self._publication_fault,
         )
+        if processed.observations:
+            rebuild_profiles(
+                self.vault_root,
+                as_of=timestamp,
+                project_aliases=(
+                    {scope.scope_id: scope.project_alias or ""}
+                    if scope.kind == "project"
+                    else {}
+                ),
+            )
         return PublicationResult(
             status=status,
             manifest_path=manifest_path,

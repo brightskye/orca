@@ -197,13 +197,13 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Validate Interaction Observations using the controlled dimensions,
+- [x] Validate Interaction Observations using the controlled dimensions,
   contexts, evidence classes, and abstention rules.
-- [ ] Consolidate scoped Adaptive Interaction Profiles with accepted activation,
+- [x] Consolidate scoped Adaptive Interaction Profiles with accepted activation,
   conflict, replacement, expiry, and evidence-retention behavior.
-- [ ] Compile only active applicable entries through the fixed versioned
+- [x] Compile only active applicable entries through the fixed versioned
   guidance templates and deterministic precedence rules.
-- [ ] Provide the bounded deterministic guidance-selection interface used by
+- [x] Provide the bounded deterministic guidance-selection interface used by
   startup, resume, and post-compaction continuation without triggering semantic
   recall.
 
@@ -396,6 +396,11 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   Candidates and Owner-only dispositions, controlled abstention, and strict
   Manifest source/operation/output validation. The aligned active suite passed
   103 deterministic tests.
+- 2026-08-30 — Milestone 4 implemented content-free Interaction Observations
+  and abstentions, immutable Manifest authority, rebuildable scoped Adaptive
+  Interaction Profiles, accepted activation/conflict/replacement/expiry rules,
+  and fixed bounded guidance selection shared by all context boundaries. The
+  aligned active suite passed 117 deterministic tests.
 
 ## Implementation review log
 

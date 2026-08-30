@@ -34,4 +34,6 @@ jobs:
           tests/step3/test_outcomes.py
           tests/step3/test_provenance.py
           tests/step3/test_publication.py
+          tests/interaction/test_interaction.py
+          tests/interaction/test_pipeline.py
           tests/agentcairn/test_distiller.py
