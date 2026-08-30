@@ -14,6 +14,7 @@ last_verified_against_code: 2026-08-29
 supersedes: []
 host-schema: orca-host-config/1
 vault-schema: orca-memory-config/0.1
+project-mapping-intent-schema: orca-project-mapping-intent/0.1
 ---
 
 # Orca Configuration Specification
@@ -128,6 +129,51 @@ The precedence rule is:
 No other environment variable may override host or vault configuration. A later
 change requires a new accepted schema version.
 
+## Project resolution and mapping
+
+Project resolution is deterministic and makes no model call. It returns exactly
+one of `mapped`, `worktree-reused`, `owner-choice-required`, `unassigned`, or
+`error`.
+
+Discovery validates configuration and Project Registry records, requires an
+existing directory, and normalizes the workspace root. A Git workspace uses its
+absolute Git top level; a non-Git workspace uses the explicitly selected root.
+Normalization resolves symlinks, removes unnecessary trailing separators, and
+uses the host filesystem's case-comparison rule.
+
+An exact valid root mapping returns `mapped` with no write. A recognized Git
+worktree may return `worktree-reused` and add a mapping automatically only when
+its normalized Git common directory exactly matches one mapped local worktree,
+that mapping resolves to one valid Project Identity, and no evidence conflicts.
+Remote URL, branch, commit, repository name, folder name, and semantic
+similarity are suggestions only and never authorize mapping.
+
+Every other unknown root, move, clone, non-worktree checkout, alias collision,
+or ambiguous state requires one Owner choice:
+
+1. create a new project with a confirmed unique Project Alias;
+2. link to one explicitly selected existing Project Identity; or
+3. keep Unassigned and make no registry or configuration write.
+
+Unknown never becomes General. Registration lets Storage allocate one permanent
+ID and publish the fixed `orca-project/0.1` record before atomically adding the
+mapping. Relinking adds only the confirmed mapping and does not rewrite
+`project.md`. An old missing mapping is not removed automatically.
+
+Before either final file changes, the workflow writes one private
+`orca-project-mapping-intent/0.1` at
+`.runtime/project-mappings/<operation-id>/intent.json` under one local mapping
+lock. It records the action, normalized local evidence, fixed identity and
+alias, target record before/after hash, host-config before/after hash and staged
+post-image, time, and policy versions. It contains no memory content or
+credentials and never enters the vault or a Run Manifest.
+
+Recovery reuses the same identity and fixed post-images. Matching partial state
+is completed and verified; state matching neither before nor after, a missing or
+invalid intent with an unlinked record, or a mapping/record disagreement stops
+for Owner repair. The intent is deleted only after both final states verify.
+Atomic host-config replacement preserves every unrelated validated value.
+
 ## Output
 
 Successful loading returns one immutable validated configuration value for the
@@ -183,10 +229,14 @@ raw credential values in diagnostics, or memory authority derived from paths.
 | Invalid or inconsistent budget | Reject configuration before any model call |
 | Unknown Project Root | Use `unassigned` or require Owner mapping; never guess a project |
 | Ambiguous alias or relink | Require Owner resolution |
+| Project mapping intent or final-state mismatch | Stop, preserve the intent, and require Owner repair |
 | Missing retrieval index | Disable semantic recall until rebuild; leave Markdown unchanged |
 
 Validation diagnostics MAY name keys and normalized non-secret paths needed for
 repair. They MUST NOT print credential values or private memory content.
+When the local status interface can load safely, a blocking validation failure
+contributes one content-free urgent Attention Item. The item cannot make invalid
+configuration usable or expose its private values.
 
 ## Idempotency and compatibility
 
@@ -211,6 +261,8 @@ There is no active configuration loader or deployed runtime. See
 - Git-ignore checks cover `config/host.yaml`, `.runtime/`, credentials, caches,
   and generated dependency state.
 - Root-mapping tests prevent silent cross-project inheritance.
+- Registration, relink, exact-worktree reuse, Unassigned, and interrupted
+  mapping tests prove stable identity, idempotency, and local-only path evidence.
 - The two tracked safe examples contain every required key and no private value.
 - The keys, cadence defaults, and precedence rule match the accepted safe
   fixtures and this specification.

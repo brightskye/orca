@@ -41,6 +41,7 @@ data classes.
 | Agent conversation history | Agent/Codex | External source | Agent-owned rollout store | Agent-owned | No Orca copy | None | Private, may contain secrets |
 | Conversation Evidence | Connector selection | Noncanonical transient evidence | Memory only during processing | Discard after processing; no raw archive | Re-readable when source remains | None | Private, minimized/redacted |
 | Retry spool | Connector/runtime | Noncanonical operational recovery | Local `.runtime/` | Delete after success; at most three automatic attempts; default 72-hour terminal retention then content-free receipt | Re-created only from available source | Never | Highly sensitive |
+| Publication intent and staged post-images | Storage/runtime | Noncanonical operational recovery | Local `.runtime/publications/` | Create before final artifact mutation; delete only after verified Manifest and checkpoint publication | Completes the fixed run without another semantic call; otherwise requires human repair | Never | Highly sensitive |
 | Conversation Continuation Summary | Storage from validated proposal | Noncanonical derived view | Vault shallow scope | Living replacement view | Rebuildable from permitted evidence only while available; provenance in Manifests | None | Private |
 | Typed Memory Record | Storage from validated proposal | Noncanonical working memory | Vault shallow project/general/unassigned scope | Living current-state record with retained bounded lineage; no general automated Phase 1 retention | Current state may be reconstructed from governed records and Manifests only where semantics permit | None | Private |
 | Project/Workstream Summary | Storage from validated proposal | Noncanonical derived view | Vault shallow project scope | Refresh on material record change; stale views excluded | Rebuildable from current typed records | None | Private |
@@ -52,6 +53,9 @@ data classes.
 | Checkpoint | Storage/runtime | Noncanonical operational progress | Local runtime | Advance last after successful durable publication | Repairable from Manifests where specified | Never | Local private |
 | Retrieval projection/index | Deterministic projection/retrieval adapter | Derived and non-authoritative | Local `.runtime/` | Replace on source hash/policy change; discard when stale | Fully rebuildable from permitted current Markdown | Never | Private |
 | Project Root Mapping | Governance/Owner confirmation | Local operational identity mapping | Local configuration/runtime | Update only through deterministic mapping or Owner-confirmed relink | Not inferred from synchronized paths | Never | Host-private |
+| Project Registry Record | Storage after Owner-confirmed registration | Noncanonical identity metadata | Vault project `project.md` | Durable; relinking does not rewrite it | Registry index rebuilds from records | None | Private; no host paths |
+| Project Mapping Intent | Configuration/runtime | Noncanonical operational recovery | Local `.runtime/project-mappings/` | Create before registry or mapping mutation; delete only after both verify | Completes the fixed mapping operation or requires Owner repair | Never | Host-private |
+| Attention projection and reminder cursor | Runtime from accepted source states | Derived, non-authoritative, content-free | Local `.runtime/` | Rebuild on source-state change; cursor suppresses same-session reminders | Fully rebuildable from permitted sources | Never | Host-private metadata only |
 | Host configuration | Owner/operator | Operational | Local ignored `config/host.yaml` plus optional `ORCA_VAULT_PATH` | Owner-managed; validated before operation | No | Never | Host-private paths and identities; no credentials |
 | Vault configuration | Owner/operator | Operational | Vault `System/Orca Memory/orca-memory.yaml` | Owner-managed accepted policy and budget selection | No | None | Private |
 | Credentials | Owner/operator and configured Adapter | External secret | Separately authorized local mechanism outside vault and Git | Owner-managed | No | Never | Secret |
@@ -78,11 +82,27 @@ records.
 1. The Connector selects and redacts permitted source records.
 2. Transient Conversation Evidence enters bounded processing or a secure retry
    spool when necessary.
-3. Validated logical proposals become controlled vault artifacts.
-4. A durable Run Manifest records the processing result.
-5. The local checkpoint advances last.
-6. Disposable projections reconcile from current permitted Markdown and
+3. Validated logical proposals become one fixed private local publication
+   intent with staged post-images.
+4. Controlled vault artifacts publish from that intent.
+5. A durable Run Manifest records exact source, operation, and output joins.
+6. The local source-segment checkpoint advances last, then the publication
+   intent is removed.
+7. Disposable projections reconcile from current permitted Markdown and
    Manifests.
+
+Project identity has a separate explicit lifecycle: deterministic discovery
+uses an exact existing mapping, exact Git worktree reuse may add one mapping,
+and every other new or uncertain root requires Owner-confirmed registration,
+relink, or Unassigned. A fixed local Project Mapping Intent makes the
+cross-filesystem `project.md` and host-config change recoverable without
+allocating a second identity. Host paths and Git evidence never enter the vault.
+
+Attention state has no independent lifecycle authority. Orca derives unresolved
+items from their owning Manifests, records, candidates, configuration results,
+runtime intents, and projections. Resolution changes only the owning source;
+status then rebuilds. The reminder cursor records only bounded local delivery
+state and cannot mark an item resolved.
 
 Exact formats and transitions remain owned by the active contracts.
 
@@ -100,17 +120,20 @@ candidate cleanup cannot make a resolved position current or reviewable again.
 
 ## Consistency and recovery
 
-Phase 1 uses local filesystem state. Publication is recoverable through durable
-artifacts, Manifest-last receipt semantics, and checkpoint-last progress rather
-than claimed transactional atomicity. Optional SQLite and retrieval indexes are
-disposable accelerators.
+Phase 1 uses local filesystem state. Publication is recoverable through one
+fixed local publication intent, durable artifacts, Manifest-next receipt
+semantics, and checkpoint-last progress rather than claimed transactional
+atomicity. A missing or invalid intent never authorizes automatic orphan cleanup.
+Optional SQLite and retrieval indexes are disposable accelerators.
+Project mapping recovery likewise completes only a valid fixed intent whose
+before/after states match; conflicting or orphan state requires Owner repair.
 
 ## Synchronization
 
 Phase 1 synchronizes nothing. Phase 3 synchronization is a candidate direction;
 only accepted permitted vault artifacts may eventually be eligible. Host paths,
-credentials, runtime state, checkpoints, locks, spools, queues, and indexes
-remain host-local.
+credentials, runtime state, checkpoints, publication intents, staged
+post-images, locks, spools, queues, and indexes remain host-local.
 
 ## Schema evolution and migration
 
@@ -124,7 +147,7 @@ derive identity from filenames or content hashes.
 The configured vault requires Owner-managed backup appropriate to private
 memory. The project repository backs up only public source and documentation.
 Disposable indexes are rebuilt, not backed up as authority. The current runbook
-migration must define only verified operational procedures.
+defines only verified operational procedures.
 
 ## Known risks
 

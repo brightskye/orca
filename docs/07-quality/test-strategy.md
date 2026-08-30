@@ -56,10 +56,11 @@ owns what currently passes.
 |---|---|---|
 | Unit/contract | Pure normalization, validation, compilation, state, naming, budgets, and filtering | Deterministic assertions and valid/invalid fixtures |
 | Module integration | Conversation → Processor, Processor → Storage, Storage → filesystem, projection → Adapter | Deterministic boundary tests with fakes at the semantic or external seam |
-| Filesystem recovery | Publication interruption, replay, retry, stale view, index loss, and rebuild | Temporary directories, fault injection, immutable-output/hash assertions |
+| Filesystem recovery | Publication and project-mapping interruption, replay, retry, stale view, index loss, and rebuild | Temporary directories, fault injection, immutable-output/hash assertions |
 | Runtime integration | Configuration, hooks, queue, lock, worker, catch-up, skills/MCP, restart | Isolated WSL runtime and synthetic agent source |
 | Retrieval evaluation | Hard filters, relevance, ordering, overlap, budgets, and Adapter replacement | Frozen synthetic corpus, expected eligible set, ranked assertions |
 | Semantic evaluation | Provider proposal meaning and abstention | Frozen permitted inputs, rubric fixed before run, model/policy/sample labels |
+| Common-use and edge gate | Representative normal behavior plus unusual safe handling | Owner-approved frozen corpus, binary rubric, category scores, critical-failure count, separate adversarial results |
 | End to end | One controlled conversation through processing, restart, and explicit recall | Isolated test vault, deterministic artifact assertions, bounded canary, Owner review |
 
 ## Module responsibilities
@@ -68,12 +69,14 @@ owns what currently passes.
 |---|---|---|
 | Conversation and privacy | Positive event identity, assistant context, exclusions, partial tail, redaction, no raw archive | TEST-CAP-001, TEST-CAP-002 |
 | Processor | Budgets, chunking, context selection, controlled proposals, validation, abstention, secret rejection | TEST-PROC-001 |
-| Storage and provenance | Schemas, identity, placement, publication ordering, Manifest/checkpoint, replay, recovery | TEST-PROV-001, TEST-MEM-001, TEST-MEM-003 |
+| Storage and provenance | Schemas, source segments, operation/artifact/output joins, placement, publication intent, Manifest/checkpoint, replay, recovery | TEST-PROV-001, TEST-MEM-001, TEST-MEM-003 |
 | Conflicts and candidates | Replacement intent, variants, overflow, dispositions, recall exclusion, zero canonical writes | TEST-MEM-002 |
 | Interaction | Observation admission, scope, lifecycle, expiry, conflict, precedence, exact guidance | TEST-INT-001, TEST-INT-002 |
 | Retrieval | Projections, filters, ranking, budgets, stale/hash failure, rebuild, Adapter replacement | TEST-REC-001, TEST-REC-002 |
-| Configuration/runtime | Source precedence, paths, mappings, hooks, locks, retries, catch-up, restart, private boundary | TEST-CONFIG-001, TEST-RUNTIME-001 |
+| Configuration/runtime | Source precedence, paths, project registration/relink, mapping intents, hooks, locks, retries, catch-up, restart, private boundary | TEST-CONFIG-001, TEST-PROJECT-001, TEST-RUNTIME-001 |
+| Human attention | Source classification, severity, stable ID, deduplication, rebuild, resolution, privacy, reminder suppression, owning-workflow routes | TEST-ATTN-001 |
 | Complete loop | Cross-module outcomes, restart, explicit recall, absence of public/canonical surfaces | TEST-E2E-001, TEST-SAFE-001 |
+| Readiness quality | Frozen common-use cases, per-category and overall thresholds, zero critical failure, separate adversarial safe handling | TEST-QUAL-001 |
 
 Scenario definitions and verdicts remain in the
 [Acceptance Plan](acceptance.md#acceptance-scenarios).
@@ -183,13 +186,24 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 - Cover explicit privacy exclusion, every supported source class, schema drift,
   fake credential patterns, generated-output scanning, local permissions, and
   path traversal/cross-root rejection.
-- Fault-inject before each artifact, Manifest, checkpoint, spool-cleanup, summary,
-  and index step; assert recoverable state and no canonical write.
+- Fault-inject before each publication intent, artifact, Manifest, checkpoint,
+  intent/spool cleanup, summary, and index step; assert the exact recoverable or
+  human-repair state and no canonical write.
+- Cover multi-segment turns, exact segment replay, mixed `0.1`/`0.2` Manifest
+  scans, source/operation/output joins, before/after reconciliation, orphan
+  detection, and Manifest/output integrity mismatch.
+- Fault-inject project registration and relink before and after `project.md`,
+  host-config, verification, and intent cleanup. Prove stable identity, exact
+  worktree-only automatic reuse, Owner choice for clones and moves, and no vault
+  or Manifest leakage of host paths or Git evidence.
 - Test lock contention, duplicate triggers, source revision, policy revision,
   retry exhaustion, retention expiry, restart, checkpoint loss, index loss,
   stale projection, and hash mismatch.
 - Inspect process/network surfaces to prove no public listener or administrative
   endpoint is introduced.
+- Inspect attention projections and reminders for memory text, credentials,
+  unsafe paths, duplicate notices, hidden unresolved items, and mutation of the
+  owning source state.
 
 ## Performance and resource testing
 
@@ -201,6 +215,20 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 - Measure bounded hook handoff separately from background semantic processing.
 - Record performance observations as informative until an accepted requirement
   defines a pass threshold beyond the existing budgets.
+
+## Common-use and edge evaluation
+
+- Freeze at least 100 Owner-approved representative cases before execution:
+  capture/privacy 15, processing/provenance 20, project/memory 20, interaction
+  10, recall 20, and runtime/recovery 15.
+- Score each expected outcome pass/fail with no partial credit. Require 95%
+  overall, 90% in every category, and zero critical safety violation.
+- Run unusual, malformed, ambiguous, and unsupported cases in a separate edge
+  set. Every case must succeed safely, abstain or reject clearly, or expose an
+  Attention Item; do not average this set into the common-use score.
+- Record repository, provider, model, policy, corpus, and rubric versions. Rerun
+  after a material change and retain the Owner's corpus, rubric, and final-gate
+  approval.
 
 ## Regression policy
 

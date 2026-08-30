@@ -16,10 +16,11 @@ last_reviewed: 2026-08-30
 
 ## Purpose
 
-Register substantial changes that are being considered but are not accepted
-current design. A proposal supports review; it does not authorize
+Register substantial proposed changes, their review state, and their retained
+decision history. A draft proposal supports review but does not authorize
 implementation or change architecture, specifications, governance, or roadmap
-commitment.
+commitment. An accepted proposal becomes current only through promotion into
+the owning documents.
 
 ## This document owns
 
@@ -33,7 +34,15 @@ commitment.
 
 ## Active proposals
 
-No numbered RFC has been created or accepted.
+No proposal is currently active.
+
+## Accepted proposals
+
+| RFC | Title | Phase | Status |
+|---|---|---|---|
+| [RFC-0001](0001-strengthen-run-manifest-provenance.md) | Strengthen Run Manifest provenance and recovery | Phase 1 | Accepted and promoted on 2026-08-30 |
+| [RFC-0002](0002-define-project-registration-and-relinking.md) | Define project registration and relinking | Phase 1 | Accepted and promoted on 2026-08-30 |
+| [RFC-0003](0003-define-human-attention-and-common-use-gate.md) | Define human attention and common-use quality gate | Phase 1 | Accepted and promoted on 2026-08-30 |
 
 ## Undrafted proposal inputs
 

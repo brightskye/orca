@@ -20,7 +20,7 @@ related:
 
 ## Purpose
 
-This document defines the proposed security assets, actors, trust boundaries,
+This document defines the accepted security assets, actors, trust boundaries,
 threats, invariants, mitigations, and residual risks for Phase 1.
 
 ## This document owns

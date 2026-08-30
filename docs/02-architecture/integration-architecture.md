@@ -20,7 +20,7 @@ related:
 
 ## Purpose
 
-This document defines the proposed boundaries and assumptions for Orca's Codex,
+This document defines the accepted boundaries and assumptions for Orca's Codex,
 semantic-provider, AgentCairn, MCP/skill, filesystem, and configuration
 integrations.
 

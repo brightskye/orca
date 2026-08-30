@@ -21,7 +21,7 @@ between specifications. It does not define behavior itself.
 
 ## This document owns
 
-- Specification navigation, responsibility, migration status, and overlap rules.
+- Specification navigation, responsibility, and overlap rules.
 
 ## This document does not own
 
@@ -34,17 +34,17 @@ errors, configuration, and performance constraints callers or adapters must know
 Implementation complexity stays behind that interface. A specification must link
 to another owner rather than copying its schemas or state machines.
 
-| Subject | Specification | Migration state | Current exact owner |
-|---|---|---|---|
-| Capture and privacy pipeline | [Capture Pipeline](capture-pipeline.md) | Accepted extracted specification | [Capture Pipeline](capture-pipeline.md) |
-| Bounded semantic processing | [Processing Pipeline](processing-pipeline.md) | Accepted extracted specification | [Processing Pipeline](processing-pipeline.md) |
-| Memory records, summaries, conflicts, layout, and relationships | [Memory Model](memory-model.md) | Accepted direct migration | [Memory Model](memory-model.md) |
-| Ordinary Knowledge Candidates | [Knowledge Candidates](knowledge-candidates.md) | Accepted new contract | [Knowledge Candidates](knowledge-candidates.md) |
-| Run Manifests and checkpoints | [Provenance Ledger](provenance-ledger.md) | Accepted direct migration | [Provenance Ledger](provenance-ledger.md) |
-| Recall and retrieval projections | [Retrieval Contract](retrieval-contract.md) | Accepted extracted specification | [Retrieval Contract](retrieval-contract.md) |
-| Interaction observations and profiles | [Interaction Preferences](interaction-preferences.md) | Accepted direct migration | [Interaction Preferences](interaction-preferences.md) |
-| Exact compiled interaction guidance | [Interaction Guidance](interaction-guidance.md) | Accepted direct migration | [Interaction Guidance](interaction-guidance.md) |
-| Host and vault configuration | [Configuration](configuration.md) | Accepted new schemas | [Configuration](configuration.md) |
+| Subject | Canonical specification |
+|---|---|
+| Capture and privacy pipeline | [Capture Pipeline](capture-pipeline.md) |
+| Bounded semantic processing | [Processing Pipeline](processing-pipeline.md) |
+| Memory records, summaries, conflicts, layout, and relationships | [Memory Model](memory-model.md) |
+| Ordinary Knowledge Candidates | [Knowledge Candidates](knowledge-candidates.md) |
+| Run Manifests and checkpoints | [Provenance Ledger](provenance-ledger.md) |
+| Recall and retrieval projections | [Retrieval Contract](retrieval-contract.md) |
+| Interaction observations and profiles | [Interaction Preferences](interaction-preferences.md) |
+| Exact compiled interaction guidance | [Interaction Guidance](interaction-guidance.md) |
+| Host and vault configuration | [Configuration](configuration.md) |
 
 ## Overlap rules
 
@@ -67,14 +67,11 @@ to another owner rather than copying its schemas or state machines.
   behavioral specification owns its applicable default values; the runbook owns
   executable operational procedures.
 
-## Authority transition
+## Authority state
 
-The Owner accepted the four direct contract migrations and the extracted
-Capture, Processing, and Retrieval specifications on 2026-08-29. Root-level
-direct-contract sources remain as compatibility mirrors and must not be edited
-independently. The Owner accepted Knowledge Candidates and Configuration on
-2026-08-30. All Phase 1 specification subjects in this registry now have
-normative owners.
+Every specification in this registry is accepted and normative. Historical
+source contracts under `docs/_archive/` retain migration evidence only and do
+not define current behavior.
 
 ## Related documents
 

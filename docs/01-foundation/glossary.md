@@ -138,6 +138,16 @@ A host-local association between one normalized project root and a Project
 Identity; several roots may map to the same project.
 _Avoid_: project identity, synchronized path
 
+**Project Registration**:
+The Owner-confirmed workflow that creates one new Project Identity, Project
+Alias, project identity record, and local Project Root Mapping.
+_Avoid_: automatic project detection, project relink
+
+**Project Relink**:
+The Owner-confirmed workflow that maps another local root to an existing Project
+Identity; exact local Git worktree reuse is the one deterministic exception.
+_Avoid_: project merge, automatic clone matching
+
 **Workstream Label**:
 A relationship label connecting related records within Project Memory, such as
 B1, B2, or B3 under Project B; it is not a separate memory scope.
@@ -148,6 +158,22 @@ Two or more contradictory variants of the same Typed Memory Record for which no
 later trusted Owner turn clearly establishes an applicable replacement; none is
 current.
 _Avoid_: source revision, duplicate
+
+**Attention Item**:
+A content-free, deterministic pointer showing that an accepted Orca source
+state needs human review or repair; it has no memory authority and changes
+nothing by itself.
+_Avoid_: notification content, review decision
+
+**Orca Status**:
+The single explicit local view that groups unresolved Attention Items by class
+and severity and routes the Owner to their owning workflows.
+_Avoid_: dashboard, health authority
+
+**Common-Use Gate**:
+The frozen Phase 1 evaluation that measures representative normal use separately
+from the mandatory edge-safety set and deterministic safety scenarios.
+_Avoid_: universal quality score, safety proof
 
 **Conflict Variant**:
 One incompatible alternative within a Memory Conflict, identified permanently

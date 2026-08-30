@@ -145,8 +145,10 @@ may perform a disposition transition.
    the candidate body or advance its source or Storage timestamps.
 5. A materially different proposal MUST receive a distinct candidate identity.
    Similarity alone MUST NOT merge candidates.
-6. Candidate review MUST be explicitly invoked by the Owner. Candidates MUST
-   NOT be injected or announced automatically at startup.
+6. Candidate review MUST be explicitly invoked by the Owner. Candidate content
+   MUST NOT be injected or announced automatically at startup. A pending
+   candidate contributes only a content-free review count and safe ID to Orca
+   Status and its once-per-session counts-only reminder.
 7. All candidate states MUST remain outside ordinary Recall, structural
    summaries, interaction profiles, and automatic agent context.
 8. A candidate marked `approved-for-manual-apply` remains noncanonical. It MAY
@@ -156,6 +158,8 @@ may perform a disposition transition.
 9. Phase 1 applies no age-based retention and exposes no candidate-cleanup
    interface. Candidates persist until a later accepted retention specification
    defines an Owner-authorized cleanup workflow.
+10. Orca Status derives candidate Attention Items from current candidate state;
+    status cannot approve, reject, clean up, recall, or apply a candidate.
 
 ## Invariants
 
@@ -178,13 +182,15 @@ may perform a disposition transition.
 | Credential-like generated value | Reject before storage, indexing, or synchronization |
 | Duplicate exact proposal from already processed sources | No new candidate and no semantic replay |
 | Disposition for missing, stale, or non-pending identity | Fail closed; change nothing |
-| Interrupted candidate publication | Do not publish its Run Manifest or advance the checkpoint |
+| Interrupted candidate publication | Recover from the fixed publication intent; do not advance the checkpoint before its Run Manifest |
 | Interrupted disposition update | Reconcile candidate status against its durable disposition receipt before retry |
 
 Repeating the same validated creation or disposition operation MUST converge on
 one candidate identity and one terminal state without duplicate artifacts.
-After interrupted publication, Storage MUST reuse a recorded `candidate_id` or
-reconcile the orphaned artifact before it assigns another identity.
+After interrupted publication, Storage MUST reuse the `candidate_id` and fixed
+output recorded by the publication intent. If that intent is missing or invalid,
+Storage MUST expose the orphan for human repair rather than assign another
+identity, overwrite it, or delete it.
 
 ## Security and privacy
 

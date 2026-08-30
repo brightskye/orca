@@ -85,8 +85,9 @@ without checkpoint advancement.
 identity-changing, unsupported-transition, and credential-bearing proposals
 **When** Processor constructs and validates a semantic run
 **Then** accepted context ceilings and splitting rules are enforced, invalid
-output publishes nothing, provider fields grant no identity or authority, and a
-valid abstention becomes a successful `no_memory` result.
+output publishes nothing, every accepted operation cites its exact current-run
+source segments, provider fields grant no identity or authority, and a valid
+abstention becomes a successful `no_memory` result.
 
 **Related requirements:** REQ-PROC-001, REQ-PROC-002, REQ-SAFE-001
 **Related specification:** [Processing Pipeline](../03-specifications/processing-pipeline.md)
@@ -94,16 +95,21 @@ valid abstention becomes a successful `no_memory` result.
 
 ### TEST-PROV-001 — Publication, replay, and progress recovery are idempotent
 
-**Given** new input, exact replay, source revision, changed redaction policy,
-artifact/Manifest/checkpoint interruption points, and a missing checkpoint
+**Given** new input, a multi-segment turn, exact segment replay, source or
+segmentation conflict, changed redaction/segmentation policy, mixed `0.1` and
+`0.2` receipts, artifact/Manifest/checkpoint/intent-cleanup interruption points,
+a missing checkpoint, and an orphan or before/after hash mismatch
 **When** Storage publishes or recovers a processing run
-**Then** artifacts publish before one immutable Manifest, the checkpoint advances
-last, exact replay makes no semantic call, source revision fails closed, and an
-available Manifest repairs progress without duplicate output.
+**Then** one complete local intent publishes before final artifacts, every
+operation joins exact sources to stable artifact identity and physical effects,
+one immutable Manifest publishes before the source-segment checkpoint, safe
+recovery makes no second semantic call, conflicts fail closed for human repair,
+and an available Manifest repairs progress without duplicate output.
 
 **Related requirements:** REQ-PROC-003, REQ-AUD-001, REQ-OPS-003
 **Related specification:** [Provenance Ledger](../03-specifications/provenance-ledger.md)
-**Required evidence:** deterministic filesystem fault-injection and replay tests
+**Required evidence:** deterministic schema, source/operation/output join,
+mixed-version scan, filesystem fault-injection, recovery, and replay tests
 
 ### TEST-MEM-001 — Typed memory preserves identity, scope, and controlled state
 
@@ -213,6 +219,22 @@ runtime state remain local and ignored.
 **Related specification:** [Configuration](../03-specifications/configuration.md)
 **Required evidence:** deterministic configuration and Git-ignore tests
 
+### TEST-PROJECT-001 — Project registration and relinking preserve identity
+
+**Given** exact mapping, new registration, explicit relink, exact Git worktree,
+move, clone, matching-remote, non-Git, alias-collision, ambiguous, Unassigned,
+interrupted-write, lost-intent, and conflicting-state fixtures
+**When** project resolution and mapping run
+**Then** only an exact mapping or exact nonconflicting local worktree resolves
+automatically; every other uncertain case requires one Owner choice or remains
+Unassigned; retries reuse one permanent identity; conflicts fail closed for
+human repair; and host paths and Git evidence never enter the vault or Manifest.
+
+**Related requirements:** REQ-MEM-001, REQ-OPS-001, REQ-SAFE-001
+**Related specifications:** [Memory Model](../03-specifications/memory-model.md), [Configuration](../03-specifications/configuration.md)
+**Required evidence:** deterministic resolution, registration, relink,
+fault-injection, case-comparison, idempotency, and path-leakage tests
+
 ### TEST-RUNTIME-001 — One private local runtime recovers lifecycle work
 
 **Given** startup, resume, post-compaction, `PreCompact`, `SessionEnd`, explicit
@@ -226,6 +248,25 @@ lifecycle, no-op catch-up makes no model call, and no public interface exists.
 **Related requirements:** REQ-CAP-003, REQ-OPS-002, REQ-OPS-003
 **Related specifications:** [Runtime Architecture](../02-architecture/runtime.md), [Deployment Architecture](../02-architecture/deployment.md)
 **Required evidence:** deterministic runtime integration tests plus an isolated local operational canary
+
+### TEST-ATTN-001 — Human attention is visible, quiet, and content-free
+
+**Given** terminal failure, orphan, integrity mismatch, stuck publication and
+mapping intents, invalid configuration, blocking stale derived state,
+Unassigned records, Memory Conflicts, overflow, pending Knowledge Candidates,
+resolved items, duplicate observations, restart, and projection-loss fixtures
+**When** attention state rebuilds, session start or resume runs, and the Owner
+invokes Orca Status
+**Then** unresolved items receive stable classes, severities, IDs, and owning
+workflow routes; resolved items disappear only when their source proves
+resolution; startup shows at most one counts-only reminder per session; and no
+memory text, credential, model call, recall, mutation, public notification, or
+separate authority is introduced.
+
+**Related requirements:** REQ-OPS-003, REQ-OPS-004, REQ-SAFE-001
+**Related specifications:** [Runtime Architecture](../02-architecture/runtime.md), [Data Architecture](../02-architecture/data-architecture.md)
+**Required evidence:** deterministic classification, severity, deduplication,
+rebuild, resolution, privacy, reminder, and route tests
 
 ### TEST-E2E-001 — A bounded conversation is processed and recalled locally
 
@@ -255,6 +296,24 @@ the Owner remains final authority.
 **Related specifications:** [Memory System Contract](../governance/memory-system-contract.md), [Security and Trust](../02-architecture/security-and-trust.md)
 **Required evidence:** deterministic negative-surface, filesystem-diff, and network-boundary tests
 
+### TEST-QUAL-001 — Common use passes without averaging away unsafe edges
+
+**Given** an Owner-approved frozen corpus of at least 100 representative cases
+with the accepted category minimums and expected binary outcomes, plus a
+separate frozen adversarial set
+**When** Orca runs with recorded repository, provider, model, policy, corpus,
+and rubric versions
+**Then** at least 95% of common-use cases pass overall, every category passes at
+least 90%, no critical authority/privacy/secret/scope/canonical-write/identity/
+silent-loss violation occurs, and every adversarial case succeeds safely,
+abstains or rejects clearly, or exposes human attention.
+
+**Related requirements:** REQ-QUAL-001, REQ-QUAL-002, REQ-SAFE-001
+**Related specifications:** [Specification Index](../03-specifications/README.md), [Runtime Architecture](../02-architecture/runtime.md)
+**Required evidence:** frozen permitted corpus, expected outcomes, fixed binary
+rubric, per-case results, per-category and overall scores, critical-failure
+count, version record, and Owner verdict
+
 ## Requirement coverage
 
 Every Phase 1 requirement ID is referenced by at least one scenario above.
@@ -267,9 +326,9 @@ Detailed test mechanics and suite placement belong to the
 |---|---|
 | Supported Owner and assistant context with provenance and privacy exclusions | TEST-CAP-001, TEST-CAP-002 |
 | Bounded, retry-safe processing with durable Manifests and checkpoint-last progress | TEST-PROC-001, TEST-PROV-001, TEST-RUNTIME-001 |
-| Memory, candidate, interaction, and recall contracts through deterministic validation | TEST-MEM-001, TEST-MEM-002, TEST-MEM-003, TEST-INT-001, TEST-INT-002, TEST-REC-001, TEST-REC-002 |
-| Restart, replay, rebuild, conflict, privacy, and secret-containment quality gates | TEST-CAP-002, TEST-PROV-001, TEST-MEM-002, TEST-REC-002, TEST-CONFIG-001, TEST-RUNTIME-001 |
-| Complete private local loop with no public service or automatic canonical mutation | TEST-E2E-001, TEST-SAFE-001 |
+| Memory, project, candidate, interaction, and recall contracts through deterministic validation | TEST-MEM-001, TEST-MEM-002, TEST-MEM-003, TEST-PROJECT-001, TEST-INT-001, TEST-INT-002, TEST-REC-001, TEST-REC-002 |
+| Restart, replay, rebuild, conflict, privacy, secret containment, and visible human attention | TEST-CAP-002, TEST-PROV-001, TEST-MEM-002, TEST-REC-002, TEST-CONFIG-001, TEST-PROJECT-001, TEST-RUNTIME-001, TEST-ATTN-001 |
+| Complete private local loop with no public service or automatic canonical mutation | TEST-E2E-001, TEST-SAFE-001, TEST-QUAL-001 |
 
 ## Phase gate
 
@@ -281,6 +340,8 @@ Phase 1 remains active until:
 - the canonical test command and CI cover every required deterministic suite;
 - required procedures in the [Phase 1 Local Runbook](../08-operations/runbook.md)
   are implemented and verified against an isolated local vault;
+- TEST-QUAL-001 passes its frozen common-use corpus and separate edge-safety set
+  with zero critical failure;
 - semantic evaluations retain their model, policy, dataset, and sample-size
   limits and are not used as deterministic proof; and
 - the Owner reviews the complete evidence set and accepts Phase 1 completion.

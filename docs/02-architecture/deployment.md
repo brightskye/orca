@@ -22,7 +22,7 @@ related:
 
 ## Purpose
 
-This document defines the proposed Phase 1 deployment boundary and clearly
+This document defines the accepted Phase 1 deployment boundary and clearly
 labels candidate later-phase topology without accepting its exact design.
 
 ## This document owns

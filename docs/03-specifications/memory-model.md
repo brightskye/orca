@@ -9,7 +9,7 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-29
+last_reviewed: 2026-08-30
 last_verified_against_code: 2026-08-29
 supersedes: []
 version: orca-memory-record/0.13
@@ -22,6 +22,7 @@ variant-policy: orca-memory-variant/0.4
 review-policy: orca-memory-review/0.2
 overflow-policy: orca-conflict-overflow/0.1
 body-policy: orca-memory-body/0.1
+project-schema: orca-project/0.1
 ---
 
 # Orca Memory Model Specification
@@ -206,8 +207,9 @@ and validates `review_state` from validated conflict operations, and assigns
 storage timestamps before publication.
 
 Frontmatter does not duplicate the filename, physical path, Markdown body, or
-content hash. Run Manifests bind the published path and content hash to the
-record identity and schema version.
+content hash. `orca-run-manifest/0.2` operation receipts bind exact source
+segments to `memory_id`; their output receipts bind that identity to the
+published path, schema version, effect, and before/after content hashes.
 
 ## Provenance boundary
 
@@ -216,11 +218,14 @@ pointer, source hash list, or unbounded source array. Its `memory_id` is the joi
 key for audit.
 
 Immutable Run Manifests retain the complete supporting source history, including
-conversation and turn identities, trusted turn timestamps, normalized source
-hashes, processing policy, and published output hashes. Filesystem manifest
-lookup is the Phase 1 correctness baseline. An optional local SQLite projection
-may map `memory_id` to matching manifests for faster audit; it is disposable and
-rebuildable by scanning the manifests.
+conversation and turn identities, exact segment identities and hashes, trusted
+turn timestamps, processing policy, accepted operation/outcome, and physical
+output effects and hashes. Every operation that affects or supports a Typed
+Memory Record records its `memory_id` as `artifact_id` and cites its exact
+current-run source segments. Filesystem manifest lookup is the Phase 1
+correctness baseline. An optional local SQLite projection may map `memory_id` to
+matching operations for faster audit; it is disposable and rebuildable by
+scanning the manifests.
 
 An exact support-only result writes a successful Run Manifest and advances the
 source checkpoint, but it does not rewrite the Typed Memory Record or advance
@@ -349,11 +354,10 @@ authority, or scope.
   override the latest-trusted-turn rule or an explicit newer Owner resolution.
 - A genuinely distinct third simultaneously unresolved variant is preserved and
   immediately crosses the Conflict Review Threshold, marking review as urgent.
-- Crossing the threshold creates no automatic startup notice and injects no
-  memory into an agent conversation. Conflict Review begins only when the Owner
-  explicitly invokes the review skill. A future dashboard or scheduled
-  memory-health report may expose aggregate pending-review state, but neither is
-  required by the current Phase 1 flow.
+- Crossing the threshold creates an Attention Item eligible for the counts-only
+  Orca Status reminder, but injects no memory into an agent conversation.
+  Conflict Review begins only when the Owner explicitly invokes its owning
+  workflow; status never includes conflict content or resolves the record.
 - One living memory record may contain at most three active unresolved variants.
   Every later genuinely distinct position, beginning with `v4`, is stored as a
   durable redacted overflow candidate with its stable record-local variant ID and
@@ -369,6 +373,8 @@ authority, or scope.
 The living Typed Memory Record owns its pending-review state. Phase 1 creates no
 duplicate review-queue record. A durable redacted overflow candidate remains a
 separate provisional artifact when the three-active-variant bound is exceeded.
+Orca Status derives its content-free conflict item from these source states and
+has no independent review authority.
 
 `status` and `review_state` are independent axes:
 
@@ -579,9 +585,9 @@ directories shown above are conceptual and need not exist.
 - Storage derives `<project-alias-slug>` from the Owner-accepted Project Alias
   using the portable slug rules in this contract. It must be unique under
   case-insensitive comparison.
-- `project.md` stores the permanent `project_id`, current Project Alias, and
-  project identity metadata. The directory name remains a locator, not project
-  identity.
+- `project.md` uses `orca-project/0.1` and stores the permanent `project_id`,
+  current Project Alias, and project identity metadata. The directory name
+  remains a locator, not project identity.
 - The collection of project identity records is the durable logical Orca
   Project Registry. A local registry index is disposable and rebuildable from
   those files; Phase 1 has no separate `registry.md`.
@@ -590,6 +596,26 @@ directories shown above are conceptual and need not exist.
   reconciles the local indexes.
 - `summary.md` is the one current Project Summary for that Project Memory. It is
   a rebuildable view and has no independent `memory_id`.
+
+Every `project.md` has exactly this frontmatter shape:
+
+```yaml
+schema_version: orca-project/0.1
+project_id: proj_<opaque-id>
+project_alias: Orca
+authority: noncanonical
+registration_method: owner-confirmed
+created_at: 2026-08-30T10:00:00Z
+updated_at: 2026-08-30T10:00:00Z
+```
+
+Its body is `# <Project Alias>` followed by `Project registry identity record.`
+Storage assigns the permanent opaque ID and UTC timestamps. A root relink does
+not rewrite this record or advance `updated_at`. The alias and portable alias
+slug must each be unique under case-insensitive comparison; `general` and
+`unassigned` are reserved. The record contains no host path, Git metadata,
+remote, credential, or source conversation. Registration and relinking behavior
+is owned by [Configuration](configuration.md#project-resolution-and-mapping).
 
 ### Record placement
 

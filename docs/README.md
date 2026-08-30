@@ -69,20 +69,16 @@ project documentation.
 | Exact compiled presentation guidance | [Interaction Guidance](03-specifications/interaction-guidance.md) |
 | Host and vault configuration fields, defaults, validation, and precedence | [Configuration](03-specifications/configuration.md) |
 | Significant architectural rationale and ADR numbering | [Decision Registry](04-decisions/README.md) |
-| Substantial unaccepted future changes and RFC lifecycle | [Proposal Registry](05-proposals/README.md) |
+| Proposal lifecycle and substantial design-change records | [Proposal Registry](05-proposals/README.md) |
 | Current implementation sequence and milestone progress | [Plan Registry](06-plans/README.md) |
 | Phase 1 acceptance scenarios and phase gate | [Acceptance Plan](07-quality/acceptance.md) |
 | Test levels, suites, fixtures, and evaluation boundaries | [Test Strategy](07-quality/test-strategy.md) |
 | Vulnerability reporting | Root [Security Policy](../SECURITY.md) |
 | PDS rules for this repository | Root [PDS v0.2](../PDS.md) |
 
-The [Project Charter](01-foundation/project-charter.md),
-[Requirements](01-foundation/requirements.md), and
-[Glossary](01-foundation/glossary.md) were accepted on 2026-08-29 after parity
-validation. The architecture package was accepted on 2026-08-29. Flat source
-documents remain labelled migration sources for exact content not yet moved into
-specifications or operations. This index must be updated as those remaining
-ownership rows move.
+All documents registered below have completed their PDS ownership transition.
+Superseded sources are historical under [`docs/_archive/`](_archive/README.md),
+and no current document depends on them for accepted behavior.
 
 ## Task routes
 
@@ -120,8 +116,7 @@ contract
 ### Change domain terminology
 
 [Glossary](01-foundation/glossary.md) → affected requirements, architecture, and
-specifications. The root `CONTEXT.md` is a retained migration source until the
-glossary transition is accepted.
+specifications. Root `CONTEXT.md` is a compatibility pointer only.
 
 ### Review future direction
 
@@ -163,6 +158,9 @@ specifications.
 | [Decision Registry](04-decisions/README.md) | ADR navigation, numbering, lifecycle, and applicability | Informative |
 | [ADR-0004](04-decisions/0004-separate-project-workspace-from-vault.md) | Accepted checkout/vault separation rationale | Historical |
 | [Proposal Registry](05-proposals/README.md) | RFC navigation, lifecycle, and noncurrent input boundary | Informative |
+| [RFC-0001](05-proposals/0001-strengthen-run-manifest-provenance.md) | Accepted Run Manifest provenance and recovery proposal record | Informative |
+| [RFC-0002](05-proposals/0002-define-project-registration-and-relinking.md) | Accepted project registration and relinking proposal record | Informative |
+| [RFC-0003](05-proposals/0003-define-human-attention-and-common-use-gate.md) | Accepted human-attention and common-use quality-gate proposal record | Informative |
 | [Plan Registry](06-plans/README.md) | Active/completed plan navigation and lifecycle | Informative |
 | [Phase 1 Implementation Plan](06-plans/active/phase-1-implementation.md) | Accepted Phase 1 sequence and exit criteria | Informative |
 | [Acceptance Plan](07-quality/acceptance.md) | Accepted Phase 1 scenarios and gate | Normative |
@@ -193,16 +191,15 @@ contracts, and tests retain their original context. It is owned by the project
 Owner and should be reviewed for removal only after verified Phase 1 cutover and
 provenance preservation in Git history.
 
-The root `PDS.md` is the repository's authoritative copy of PDS-0.2 and must be
-included in the migration commit. A changelog is not required until an actual
-release exists.
+The root `PDS.md` is the repository's authoritative adopted copy of PDS-0.2. A
+changelog is not required until an actual release exists.
 
-## Migration state
+## Documentation state
 
-The control plane, foundation, architecture, specification, decision, quality,
-and limited-operations packages are accepted. The proposal registry and
-template are established; no RFC is active or accepted. The Phase 1
-implementation plan is accepted. Root-agent routing and source archival are
-complete. See the non-authoritative
-[migration working set](_working/pds-migration/README.md) for execution
-evidence.
+The PDS migration is complete. Current control, foundation, architecture,
+specification, decision, plan, quality, and limited-operations documents are
+accepted. RFC-0001, RFC-0002, and RFC-0003 were accepted and promoted; no RFC is
+currently active. Historical
+migration execution evidence remains in the
+non-authoritative
+[migration working set](_working/pds-migration/README.md).

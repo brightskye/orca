@@ -148,6 +148,7 @@ expose filtered candidate paths or private content as omission details.
 | Missing or corrupt index | Semantic recall unavailable until rebuild; do not silently scan the vault |
 | Unknown or ambiguous Project Alias | Request clarification; do not guess scope |
 | Stale hash or stale summary | Exclude until reconciliation |
+| Missing or stale projection/index blocks safe Recall | Exclude it and expose a content-free action-required Attention Item until rebuild succeeds |
 | No result passes relevance | Return an empty result or refinement request |
 | Result set exceeds budget | Remove or shorten lower-ranked results while preserving whole labels and provenance |
 | Adapter returns an ineligible or unknown projection | Reject it before presentation |

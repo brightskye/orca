@@ -86,11 +86,12 @@ state belongs in [Current Status](../../STATUS.md).
 
 The repository currently implements Owner-turn normalization, basic credential
 redaction, one Continuation Summary proposal and validator, immutable Run
-Manifest publication, scan-based replay detection, checkpoint-last progress,
-`no_memory`, source-revision rejection, and the prevalidated AgentCairn
-Distiller seam. Assistant context, complete controlled outputs, interaction,
-recall, runtime wiring, configuration loading, and deployment remain partial or
-planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
+Manifest `0.1` publication, scan-based replay detection, checkpoint `0.1`
+progress, `no_memory`, source-revision rejection, and the prevalidated
+AgentCairn Distiller seam. Accepted Manifest/checkpoint `0.2`, publication
+intents, assistant context, complete controlled outputs, interaction, recall,
+runtime wiring, configuration loading, and deployment remain partial or planned.
+[Current Status](../../STATUS.md) owns the detailed snapshot.
 
 ## Traceability
 
@@ -134,14 +135,18 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
 
 - [ ] Implement validated Typed Memory Record identities, controlled kinds,
   scope, status, review state, bodies, filenames, and physical placement.
-- [ ] Implement local Project Root Mapping and the logical Project Registry
-  boundary needed for safe project scope selection.
+- [ ] Implement deterministic Project Registration and Project Relink, the
+  `orca-project/0.1` registry record, exact local Git-worktree reuse, and
+  `orca-project-mapping-intent/0.1` recovery.
 - [ ] Implement `add`, exact `support`, and confirmed `update` operations with
   Storage-owned identity, paths, timestamps, and renames.
 - [ ] Refresh Conversation and Project Summaries after material changes and
   avoid rewrites after support-only or no-change outcomes.
-- [ ] Extend Run Manifest output receipts and checkpoint-last publication for
-  every new artifact.
+- [ ] Implement `orca-run-manifest/0.2` source/operation/output joins and
+  `orca-checkpoint/0.2` for the unsegmented Typed Memory slice while preserving
+  immutable `0.1` read compatibility.
+- [ ] Prepare one fixed private publication intent before artifact mutation and
+  recover matching before/after states without another semantic call.
 
 ### Exit criteria
 
@@ -149,10 +154,15 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   identity, transition, filename, relationship, and body fixtures fail closed.
 - Add, support, update, replay, interrupted publication, and no-change tests
   prove stable identity and idempotent behavior.
-- Project mappings cannot silently merge uncertain roots, clones, General,
-  Unassigned, or another project scope.
-- Published artifacts, Manifest, and checkpoint follow recoverable artifact-
-  first/Manifest-next/checkpoint-last ordering.
+- Exact mapping, new registration, explicit relink, exact Git worktree, clone,
+  move, ambiguity, Keep Unassigned, and interrupted mapping tests prove one
+  stable identity, no silent scope merge, and no vault path or Git-evidence
+  leak.
+- Publication-intent, artifact, Manifest, checkpoint, and cleanup fault tests
+  prove safe completion or content-free human repair without duplicate semantic
+  work.
+- Publication follows intent-first/artifact-next/Manifest-next/checkpoint-last
+  ordering, and mixed `0.1`/`0.2` scans preserve old receipts.
 
 ## Milestone 3 — Complete bounded processing, provenance, and candidates
 
@@ -160,20 +170,23 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
 
 - [ ] Enforce total and per-context Processor budgets, chronological chunking,
   turn-boundary splitting, deterministic oversized-turn segmentation, and
-  bounded related-record selection.
+  bounded related-record selection. Complete the uniform source-segment receipt
+  and segment-cursor behavior for multi-segment turns.
 - [ ] Validate the complete memory and candidate proposal set, including
   supersession, conflict, abstention, and ordinary Knowledge Candidates.
 - [ ] Implement Conflict Overflow and ordinary Knowledge Candidate publication
   without adding recall eligibility or canonical authority.
-- [ ] Complete Run Manifest fields and failure receipts for every semantic
-  outcome, and repair replay checkpoints with an available Manifest locator.
+- [ ] Complete Run Manifest operations for every semantic outcome and artifact
+  kind, and repair replay checkpoints with the exact Manifest locator and
+  source-segment cursor.
 - [ ] Reject invalid, cross-scope, identity-changing, unsupported-transition,
   and credential-bearing output before partial publication.
 
 ### Exit criteria
 
-- Budget, backlog, overlap, oversized-turn, proposal, abstention, secret-output,
-  source-revision, replay, and interrupted-publication tests satisfy the
+- Budget, backlog, overlap, oversized-turn, exact-segment replay,
+  source/operation/output join, proposal, abstention, secret-output,
+  source/segmentation conflict, and interrupted-publication tests satisfy the
   Processing Pipeline and Provenance Ledger.
 - Candidate schema, placement, terminal disposition, indefinite Phase 1
   retention, replay, and recall-exclusion tests satisfy Knowledge Candidates.
@@ -241,6 +254,9 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   path with no model call when no eligible work exists.
 - [ ] Connect startup, resume, and post-compaction continuation to the accepted
   interaction-guidance selection interface.
+- [ ] Implement deterministic Attention Item collection, the local rebuildable
+  Orca Status view, owning-workflow routes, and one counts-only reminder per
+  session when any item remains unresolved.
 - [ ] Connect Codex Desktop to the local WSL runtime and configured vault without
   exposing a public service or tracked private configuration.
 
@@ -249,6 +265,9 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
 - Configuration acceptance fixtures pass before any model call or vault write.
 - Hook, duplicate-trigger, lock, crash, retry, expiry, catch-up, restart, and
   stale-index tests prove one recoverable processing path.
+- Attention classification, severity, stable-ID, rebuild, privacy, resolution,
+  route, and reminder-suppression tests prove unresolved work remains visible
+  without content exposure or source-state mutation.
 - A clean local installation can process a permitted controlled conversation,
   load interaction guidance, perform explicit recall, and restart safely.
 - Private paths, credentials, spools, checkpoints, locks, and caches remain
@@ -265,6 +284,8 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   recovery, configuration, and deployment.
 - [ ] Run separately labelled bounded semantic evaluations without presenting
   model quality as deterministic proof.
+- [ ] Run the Owner-approved frozen common-use corpus and separate edge-safety
+  set with the accepted binary rubric and retained versions.
 - [ ] Exercise installation, routine operation, failure recovery, index rebuild,
   and restart against an isolated configured test vault.
 - [ ] Reconcile Current Status, implementation metadata, quality evidence, and
@@ -279,6 +300,9 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   CI runs the same required coverage.
 - End-to-end controlled use demonstrates the local governed-memory loop with
   zero automatic Canonical Memory mutations and no public service.
+- Common-use results meet 95% overall and 90% in every category, with zero
+  critical safety failure; every edge-safety case succeeds safely, clearly
+  abstains/rejects, or exposes human attention.
 - The Owner accepts readiness; otherwise Phase 1 remains active and incomplete.
 
 ## Dependencies and sequencing
@@ -299,8 +323,9 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   closed without losing later retryability.
 - Model output may appear authoritative; deterministic validation and Storage-
   assigned authority must remain explicit at every milestone.
-- Filesystem publication is recoverable rather than fully atomic; checkpoints
-  must remain the final write.
+- Filesystem publication is recoverable rather than fully atomic; the fixed
+  local publication intent must precede artifact mutation and the checkpoint
+  must remain the final durable progress write.
 - Fixtures or diagnostics may expose private conversation content; use synthetic
   or explicitly permitted data and keep local runtime artifacts ignored.
 - A broad end-to-end rewrite would obscure the existing verified slice; each
@@ -321,7 +346,9 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
 
 - Disable lifecycle integration before repairing a faulty runtime path.
 - Leave the last valid checkpoint unchanged after processing or publication
-  failure; replay from permitted source or retry state.
+  failure; complete a valid fixed publication intent without another semantic
+  call, or replay from permitted source/retry state only when no prepared result
+  exists.
 - Rebuild disposable indexes and projections from durable permitted artifacts.
 - Do not delete or rewrite immutable Manifests to conceal a failed attempt.
 - Revert a milestone's bounded implementation change when safe; do not weaken an
@@ -346,6 +373,12 @@ planned. [Current Status](../../STATUS.md) owns the detailed snapshot.
   through D-010 gaps.
 - 2026-08-30 — Owner accepted the seven-milestone sequence and exit criteria as
   Phase 1 execution authority.
+- 2026-08-30 — Owner accepted RFC-0001; Manifest/checkpoint `0.2` and local
+  publication-intent recovery were promoted into the accepted Phase 1 design.
+- 2026-08-30 — Owner accepted RFC-0002; Project Registration, Project Relink,
+  exact local Git-worktree reuse, and mapping-intent recovery were promoted.
+- 2026-08-30 — Owner accepted RFC-0003; Orca Status, one quiet session reminder,
+  and the common-use/edge-safety readiness gate were promoted.
 
 ## Related documents
 

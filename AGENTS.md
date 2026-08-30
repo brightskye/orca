@@ -15,7 +15,8 @@ prototype source and tests live under `legacy/`.
   deployed, or ready.
 - Read `docs/ROADMAP.md` when changing phase scope, entry conditions, or exit
   criteria.
-- Read `CONTEXT.md` when changing domain language or module boundaries.
+- Read `docs/01-foundation/glossary.md` when changing domain language or module
+  boundaries.
 - Read `docs/02-architecture/overview.md` for the active Phase 1 system structure.
 - Read `docs/governance/memory-system-contract.md` before changing authority,
   privacy, capture, processing, recall, or canonical behavior.

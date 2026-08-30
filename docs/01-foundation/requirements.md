@@ -184,6 +184,14 @@ artifacts. Restart, replay, missing-index, interrupted-publication, and stale
 derived-view cases must not corrupt Canonical Memory or silently lose accepted
 provisional state.
 
+### REQ-OPS-004 — Visible human attention
+
+Phase 1 must expose one deterministic local content-free status view for
+unresolved repair and review work. When any item remains unresolved, startup or
+resume may show at most one counts-only reminder per session. Status must not
+recall memory, make a model call, change source state, or expose a public
+notification surface.
+
 ## Quality
 
 ### REQ-QUAL-001 — Direct verification
@@ -192,6 +200,15 @@ Phase 1 acceptance must verify deterministic boundaries, replay, recovery,
 privacy exclusions, secret containment, bounded recall, interaction lifecycle,
 and zero automatic canonical mutation. Probabilistic model interpretation may be
 evaluated but must not be presented as deterministic proof.
+
+### REQ-QUAL-002 — Common-use readiness and edge safety
+
+Phase 1 readiness must pass an Owner-approved frozen corpus of at least 100
+representative cases at 95% overall and at least 90% in every accepted category,
+with zero critical authority, privacy, secret, scope, canonical-write, identity,
+or silent-unrecoverable-failure violations. A separate adversarial set must
+always succeed safely, abstain or reject clearly, or expose human attention; it
+is not averaged into the common-use percentage.
 
 ## Specification routes
 

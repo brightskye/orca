@@ -9,7 +9,7 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-29
+last_reviewed: 2026-08-30
 last_verified_against_code: 2026-08-29
 related:
   - ARCH-OVERVIEW
@@ -20,7 +20,7 @@ related:
 
 ## Purpose
 
-This document defines the proposed Phase 1 execution model, runtime flows,
+This document defines the accepted Phase 1 execution model, runtime flows,
 concurrency boundaries, publication order, and recovery responsibilities.
 
 ## This document owns
@@ -36,6 +36,8 @@ concurrency boundaries, publication order, and recovery responsibilities.
 
 | Context | Responsibility |
 |---|---|
+| Explicit project setup or resolution | Resolve a known root, register a new project, relink a root, or keep it Unassigned |
+| Explicit `Orca Status` | Build and show content-free unresolved Attention Items without a model call or state mutation |
 | Codex session-start path | Load bounded applicable interaction guidance only |
 | Explicit Recall invocation | Retrieve permitted authority-labelled context for a specific request |
 | `PreCompact` or `SessionEnd` hook | Perform bounded deterministic handoff and queue work |
@@ -45,13 +47,47 @@ concurrency boundaries, publication order, and recovery responsibilities.
 
 No permanent daemon is required by the accepted design.
 
+## Project setup flow
+
+1. Load valid local configuration and discover the normalized root without a
+   model call or file change.
+2. Use an exact valid mapping silently, or reuse an exact local Git common
+   directory when it proves one existing mapped identity.
+3. For every other unknown or ambiguous root, ask the Owner once to create,
+   link, or keep Unassigned.
+4. Before registration or relinking writes, publish one fixed private local
+   Project Mapping Intent under the mapping lock.
+5. Publish the project identity record when required, atomically update the
+   local host mapping, verify both results, then remove the intent.
+
+Project setup does not process memory and cannot grant canonical authority.
+
 ## Session-start flow
 
 1. Resolve applicable active interaction-profile entries by explicit precedence.
 2. Compile only known values through fixed guidance templates within the
    configured budget.
 3. Supply the bounded noncanonical guidance to Codex.
-4. Perform no automatic semantic memory recall or conversation processing.
+4. Check the local rebuildable attention projection and, when any item remains
+   unresolved, show at most one counts-only reminder for the session.
+5. Perform no automatic semantic memory recall or conversation processing.
+
+## Human-attention flow
+
+1. Collect accepted unresolved source states deterministically from runtime
+   failures and intents, configuration validation, stale blocking views,
+   Unassigned records, Memory Conflicts, and pending candidates.
+2. Assign each content-free item one stable ID, owning workflow, and `urgent`,
+   `action-required`, or `review` severity.
+3. Rebuild the local status projection without changing any source state.
+4. On explicit `Orca Status`, show counts by class and severity plus safe IDs
+   and owning-workflow routes; private content remains closed.
+5. Resolve an item only through its owning workflow. If resolution cannot be
+   proved, keep the item visible.
+
+The session reminder contains counts only, runs at most once after session start
+or resume, and makes no model call or memory recall. There is no background
+notification, public endpoint, or separate status authority.
 
 ## Explicit recall flow
 
@@ -62,8 +98,8 @@ No permanent daemon is required by the accepted design.
    ambiguous positions empty rather than filling a quota.
 5. Return labelled excerpts and provenance without a second summarization call.
 
-Exact selection and budget behavior remains owned by the current governance and
-operations contracts until the retrieval specification is migrated.
+Exact selection and budget behavior is owned by the
+[Retrieval Contract](../03-specifications/retrieval-contract.md).
 
 ## Processing flow
 
@@ -81,19 +117,29 @@ operations contracts until the retrieval specification is migrated.
    replaceable semantic provider.
 8. Deterministic validation admits only controlled proposals with valid source,
    scope, identity, lifecycle, and safety properties.
-9. Storage publishes validated derived artifacts and the durable Run Manifest.
-10. The source checkpoint advances last; successful retry-spool content is then
-    deleted.
-11. Retrieval reconciliation updates disposable projections and indexes.
+9. Storage prepares all post-images plus fixed Manifest and checkpoint payloads,
+   then publishes one private local publication intent.
+10. Storage publishes validated derived artifacts and the durable Run Manifest.
+11. The source-segment checkpoint advances last; successful retry-spool and
+    publication-intent content is then deleted.
+12. Retrieval reconciliation updates disposable projections and indexes.
 
 See the [processing-flow diagram](diagrams/processing-flow.mmd).
 
 ## Publication and recovery
 
-Filesystem publication is recoverable, not fully transactional. Storage prepares
-and publishes target artifacts, publishes the Run Manifest as the durable receipt,
-and advances the checkpoint last. A crash before checkpointing permits replay;
-Manifest lookup prevents a second semantic result and may repair progress.
+Filesystem publication is recoverable, not fully transactional. Before changing
+a final artifact, Storage writes one complete private local publication intent
+containing the fixed source, operation, output, Manifest, and checkpoint plan.
+It then publishes target artifacts, the immutable Run Manifest, and the
+checkpoint in that order.
+
+After interruption, matching before/after hashes let Storage finish the same
+plan without another semantic call. A target that matches neither recorded hash,
+a missing or corrupt intent with an unreceipted artifact, or a Manifest/output
+hash mismatch fails closed for human repair. A crash after Manifest publication
+permits checkpoint repair from the Manifest. Exact rules belong to the
+[Provenance Ledger](../03-specifications/provenance-ledger.md).
 
 An optional SQLite projection may accelerate processed-source, audit, and
 interaction-observation lookup. It is never the correctness baseline and must be
@@ -111,6 +157,9 @@ rebuildable from durable Manifests without conversation text.
 | Index failure | Leave Markdown untouched and require reconciliation or rebuild |
 | Summary/projection refresh failure after valid record change | Keep the source record valid, mark the derived view stale, and exclude it until bounded rebuild |
 | Interrupted conflict-candidate cleanup | Use committed resolution lineage and Manifest state to ignore stale leftovers |
+| Interrupted publication with a valid intent | Complete or reconcile the fixed plan without another semantic call |
+| Orphan, before/after hash conflict, or Manifest/output mismatch | Stop; preserve evidence; expose a content-free human repair item |
+| Project mapping intent conflict, orphan project record, or mapping/record disagreement | Stop; preserve local evidence; require Owner repair before project-scoped processing |
 
 ## Scheduling and concurrency
 
@@ -127,7 +176,9 @@ proposal, Run Manifest publication, replay detection, and checkpoint-last
 behavior exist in the initial slice. Hooks, assistant-context normalization,
 retry spooling, scheduling, complete processing budgets, typed records,
 interaction consolidation, recall, and index reconciliation remain planned or
-partial. See [Current Status](../STATUS.md).
+partial. Project Registration, Project Relink, and Project Mapping Intent
+recovery, Orca Status, and its session reminder are accepted but unimplemented.
+See [Current Status](../STATUS.md).
 
 ## Related documents
 

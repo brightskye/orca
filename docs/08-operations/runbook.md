@@ -91,8 +91,8 @@ accepted host and vault configuration interfaces.
   `ORCA_VAULT_PATH`, with conflict-on-difference validation defined by the
   [Configuration Specification](../03-specifications/configuration.md).
 
-Do not copy an example and infer that configuration is operational. Creating or
-editing private configuration is outside this migration task.
+Do not copy an example and infer that configuration is operational. No supported
+operator procedure consumes private configuration yet.
 
 ## Start
 
@@ -159,10 +159,12 @@ Its design description must not be executed as if it were a current command.
 **Unavailable as an operator procedure:** There is no supported log command or
 diagnostics interface.
 
-The initial library slice can publish immutable Run Manifests and local
-checkpoints when called programmatically. Their accepted meaning and paths are
-defined by the [Provenance Ledger](../03-specifications/provenance-ledger.md),
-but no public inspection tool exists. Do not inspect or publish local
+The initial library slice can publish immutable `0.1` Run Manifests and local
+`0.1` checkpoints when called programmatically. Accepted `0.2` source,
+operation, output, segment-cursor, and publication-intent behavior is not
+implemented. Its meaning and paths are defined by the [Provenance
+Ledger](../03-specifications/provenance-ledger.md), but no public inspection tool
+exists. Do not inspect or publish local
 `evidence/`, `index.md`, personal rollouts, private vault contents, credentials,
 or retry material as a substitute for diagnostics.
 
@@ -173,9 +175,9 @@ verified. The checkout, configured vault, agent-owned source, and local runtime
 state have different authority and recovery roles and must not be copied as one
 undifferentiated backup.
 
-Do not introduce a backup or synchronization command during documentation
-migration. [Data Architecture](../02-architecture/data-architecture.md) owns the
-classification and recovery boundaries that a future procedure must preserve.
+No backup or synchronization command is currently supported. [Data
+Architecture](../02-architecture/data-architecture.md) owns the classification
+and recovery boundaries that a future procedure must preserve.
 
 ## Restore
 
@@ -192,14 +194,28 @@ boundaries, not executable procedures:
 |---|---|---|
 | Exact replay after checkpoint loss | **Tested library behavior** | Durable Manifest scan prevents a second semantic result; current repair omits an available Manifest locator |
 | Failure before checkpoint publication | **Tested library behavior** | Leave progress unchanged so a later retry can recover |
+| Interrupted `0.2` publication | **Accepted design; unavailable** | A valid fixed publication intent completes without another semantic call; mismatch or orphan state requires human repair |
 | Partial trailing JSONL | **Known divergence** | Do not advance progress or edit the source; current normalizer raises instead of waiting |
 | Invalid or credential-bearing generated output | **Tested library behavior for output secrets** | Publish no affected output and leave progress retryable |
 | Missing or stale retrieval index | **Unavailable** | Leave Markdown unchanged; no rebuild command exists |
 | Retry-spool failure or expiry | **Unavailable** | No active spool or operator cleanup command exists |
+| Interrupted project registration or relink | **Accepted design; unavailable** | Preserve the Project Mapping Intent; matching partial state may complete, but mismatch or orphan state requires Owner repair |
 
 Do not manually edit immutable Manifests or advance checkpoints to force
 recovery. Record the failure and escalate until the owning implementation and
 procedure exist.
+
+## Human attention
+
+**Unavailable:** Orca Status and its session reminder are accepted but not
+implemented. The eventual local view will show content-free counts, safe IDs,
+severity, and owning-workflow routes for unresolved repair and review work. It
+will not show memory content, resolve an item, make a model call, or expose a
+public notification surface.
+
+Until that interface exists, do not claim that pending candidates, Unassigned
+records, conflicts, stale blocking state, or repair items are reliably surfaced.
+Use the owning accepted documents and preserve observed failure evidence.
 
 ## Rebuild derived data
 
@@ -216,15 +232,19 @@ that property is not yet exposed or verified operationally.
 | Visible assistant context is absent | Known capture divergence | Keep the source unchanged; implementation belongs in a separate task |
 | Partial final JSONL raises an error | Known capture divergence | Do not truncate or repair the agent-owned source manually |
 | Recall, interaction guidance, hooks, or catch-up are unavailable | Planned capability | Do not substitute `legacy/manual-prototype/` behavior |
-| A regression test fails | Current code no longer matches the exercised baseline | Preserve output, stop the migration claim, and diagnose in an implementation task |
+| Project setup or relink is unavailable | Accepted implementation gap | Do not hand-edit `project.md` and `config/host.yaml` as a substitute |
+| Orca Status is unavailable | Accepted implementation gap | Do not claim unresolved human work is centrally visible or build an ad hoc dashboard |
+| A regression test fails | Current code no longer matches the exercised baseline | Preserve output and diagnose before making a current verification claim |
 
 ## Known limitations
 
 - Phase 1 is not deployed for routine use.
 - The only verified executable procedure here is the repository regression
   command.
-- Configuration, deployment, hooks, worker, spool, retrieval, interaction, and
-  operator recovery interfaces remain planned or partial.
+- Configuration, deployment, hooks, worker, spool, `0.2` publication intent,
+  project setup/relink, retrieval, interaction, and operator recovery interfaces
+  remain planned or partial. Orca Status and its session reminder are also
+  planned.
 - The accepted Acceptance Plan and Test Strategy define quality authority but
   do not make unavailable runtime procedures executable.
 - No procedure in this runbook authorizes Canonical Memory mutation, public

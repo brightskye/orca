@@ -20,7 +20,7 @@ related:
 
 ## Purpose
 
-This document is the proposed primary system-design entry point for Orca Phase
+This document is the accepted primary system-design entry point for Orca Phase
 1. It describes boundaries, components, responsibilities, dependencies, and
 high-level flows without owning exact contracts or implementation status.
 
@@ -110,8 +110,9 @@ Codex-owned conversation
   transient selections.
 - The configured vault owns noncanonical memory records, candidates, interaction
   profiles, and Run Manifests.
-- The local runtime owns checkpoints, locks, queues, retry spools, receipts, host
-  mappings, and disposable indexes.
+- The local runtime owns checkpoints, locks, queues, retry spools, publication
+  intents and staged post-images, receipts, host mappings, and disposable
+  indexes.
 
 See [Data Architecture](data-architecture.md) for lifecycle and storage classes.
 
@@ -121,7 +122,8 @@ See [Data Architecture](data-architecture.md) for lifecycle and storage classes.
 - Explicit recall retrieves permitted authority-labelled memory.
 - `PreCompact`, `SessionEnd`, or explicit save queues bounded local processing.
 - The worker deduplicates source evidence, validates semantic proposals,
-  publishes outputs and a Run Manifest, then advances the checkpoint last.
+  prepares one fixed local publication intent, publishes outputs and a Run
+  Manifest, then advances the checkpoint last.
 - Retrieval reconciliation projects and indexes current permitted Markdown.
 
 See [Runtime Architecture](runtime.md) and the
@@ -132,9 +134,11 @@ See [Runtime Architecture](runtime.md) and the
 - Ambiguous, private, malformed, cross-scope, unsafe, or invalid input fails
   closed before publication.
 - Semantic or validation failure leaves the checkpoint unchanged for retry.
-- Publication is recoverable rather than transactionally atomic: artifacts are
-  prepared, the durable Run Manifest is published, and the checkpoint advances
-  last.
+- Publication is recoverable rather than transactionally atomic: a complete
+  private local intent is durable before artifact mutation, then artifacts, the
+  Run Manifest, and the checkpoint publish in order. Safe matching state
+  completes without another semantic call; mismatch fails closed for human
+  repair.
 - Index or derived-summary failure cannot roll back authoritative source records;
   stale projections are excluded until rebuilt.
 
@@ -165,8 +169,8 @@ Architecture](deployment.md) and the [Roadmap](../ROADMAP.md).
   recall, lifecycle wiring, configuration, and deployment remain incomplete.
 - Ordinary Knowledge Candidate behavior has an accepted specification; its
   schema and lifecycle remain unimplemented.
-- This architecture package is accepted. Flat architecture sources remain
-  labelled compatibility and migration material until later archive approval.
+- Superseded architecture sources are preserved under `docs/_archive/` and do
+  not define current behavior.
 
 ## Architectural risks
 

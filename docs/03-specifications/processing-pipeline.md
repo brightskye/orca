@@ -9,7 +9,7 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-29
+last_reviewed: 2026-08-30
 last_verified_against_code: 2026-08-29
 supersedes: []
 processor-policy: orca-processor/0.1
@@ -76,7 +76,9 @@ cannot fit within the complete input or output ceiling.
    own Run Manifest and checkpoint advancement.
 3. A chunk SHOULD split at a turn boundary. A single oversized turn MUST be
    segmented deterministically while preserving its conversation ID, turn ID,
-   segment order, source timestamp, and provenance.
+   segment order, source timestamp, and provenance. Every selected turn,
+   including an unsegmented turn, MUST receive the uniform source-segment
+   identity defined by the [Provenance Ledger](provenance-ledger.md).
 4. New evidence MUST NOT be silently truncated. The Processor MUST reduce the
    chunk or segment an oversized turn.
 5. Related records MUST be same-scope and current. If the complete input still
@@ -107,7 +109,7 @@ validation succeeds.
 Before any output reaches Storage, Processor and Governance MUST validate:
 
 - the response schema and controlled values;
-- that every cited source belongs to the current processing input;
+- that every cited source segment belongs to the current processing input;
 - that Governance resolved the scope without semantic guessing;
 - that a proposed target exists and remains in the same scope;
 - that an existing record's identity and scope do not change;
@@ -143,8 +145,10 @@ alone MUST NOT merge uncertain records.
 ## Outputs
 
 On success, the Processor returns validated instructions and exact source
-bindings for zero or more contract-owned artifacts. Storage then assigns
-identity and physical representation according to:
+segment bindings for zero or more contract-owned artifacts. Each instruction
+identifies its accepted operation and source support; Storage assigns run-local
+operation references, stable artifact identity where required, physical
+representation, and output references according to:
 
 - [Memory Model](memory-model.md) for structural summaries, Typed Memory
   Records, conflicts, and Conflict Overflow Candidates;
@@ -163,7 +167,12 @@ A valid output-free result MUST become a successful `no_memory` Run Manifest.
   authority.
 - Source references in validated output are a subset of the current bounded
   input.
-- One failed run commits no derived artifact and advances no checkpoint.
+- Every accepted operation retains its exact current-run source-segment
+  bindings through the Run Manifest.
+- Provider or deterministic-validation failure creates no publication intent or
+  derived artifact. Interrupted publication may leave only the fixed
+  intent-bound before/after state; it advances no checkpoint until recovery
+  publishes the Run Manifest.
 - Complete audit provenance remains in Run Manifests, not duplicated into Typed
   Memory Record bodies or frontmatter.
 - Project scope, general scope, and unassigned scope never match automatically
@@ -181,19 +190,21 @@ A valid output-free result MUST become a successful `no_memory` Run Manifest.
 | Credential-like generated value | Reject every affected output before storage or indexing |
 | Valid `no_memory` | Publish a successful Run Manifest and advance checkpoint last |
 | Summary refresh failure after an independently valid Owner resolution | Preserve the resolved record; mark the derived summary stale in the Run Manifest for bounded rebuild |
+| Interrupted artifact or Manifest publication | Recover from the fixed local publication intent without another provider call, or fail closed for human repair |
 
 When proposed artifacts are prepared together, publication is recoverable but
-not described as transactionally atomic. Artifact files publish first, the Run
-Manifest publishes after the complete output set is durable, and the local
-checkpoint advances last as defined by the Provenance Ledger.
+not described as transactionally atomic. Storage first publishes the complete
+private local publication intent, then artifacts, the immutable Run Manifest,
+and the checkpoint in the order defined by the Provenance Ledger.
 
 ## Idempotency
 
 Durable Run Manifests are the processed-source authority. Exact successful
-replay MUST make no semantic call and create no duplicate artifact. A known
-source identity with a different hash under the same redaction policy MUST fail
-closed as a source revision. A redaction-policy change requires governed
-reprocessing rather than being treated as an exact replay.
+segment replay MUST make no semantic call and create no duplicate artifact. A
+known segment identity with a different whole-turn hash, segment range, segment
+hash, count, or same-policy representation MUST fail closed. A redaction or
+segmentation-policy change requires governed reprocessing rather than being
+treated as an unrelated new segment.
 
 ## Security and privacy
 
@@ -212,19 +223,22 @@ The interface preserves the accepted Phase 1 rules from the
 
 Current code supports one replaceable provider call for a Conversation
 Continuation Summary, validates its required text and secret exclusion, and
-publishes `success` or `no_memory`. It does not yet implement full context
-budgets, chunking, related-record selection, the complete proposal set,
-interaction processing, or the candidate and record lifecycles. See
-[Current Status](../STATUS.md).
+publishes the earlier `orca-run-manifest/0.1` and `orca-checkpoint/0.1` formats.
+It does not yet implement source segmentation, publication intents, full context
+budgets, related-record selection, the complete proposal set, interaction
+processing, or the candidate and record lifecycles. See [Current
+Status](../STATUS.md).
 
 ## Acceptance criteria
 
 - Budget tests cover every category ceiling and complete input/output ceilings.
-- Backlog and oversized-turn fixtures preserve chronological identity without
-  truncation and create separate run receipts.
+- Backlog and oversized-turn fixtures preserve chronological segment identity
+  without truncation and create separate replay-safe run receipts.
 - Provider proposals cannot assign deterministic Storage or authority fields.
 - Every controlled operation passes valid cases and rejects missing-target,
   cross-scope, identity-change, unsupported-transition, and secret-output cases.
+- Every accepted operation cites exact current-run source segments and its
+  logical artifact identity.
 - Exact replay performs no semantic call; a valid abstention publishes
   `no_memory`; failed validation leaves the checkpoint unchanged.
 - Published outputs validate against their owning specifications without

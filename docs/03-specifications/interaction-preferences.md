@@ -9,7 +9,7 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-29
+last_reviewed: 2026-08-30
 last_verified_against_code: 2026-08-29
 supersedes: []
 observation_policy: interaction-observation/1
@@ -42,10 +42,13 @@ Interaction Observation into the current immutable Run Manifest or records a
 content-free abstention for an evaluated plausible signal. Ordinary turns create
 no preference receipt.
 
-Run Manifests are the observation authority. Adaptive Interaction Profiles are
-living derived views. A file-only Manifest scan is the baseline; an optional
-local SQLite projection may accelerate lookup and aggregation but remains
-disposable and contains no conversation text.
+Run Manifests are the observation authority. Each admitted observation is the
+`embedded_artifact` of one `observation` operation receipt; its `observation_id`
+is the operation's `artifact_id`, and the operation cites the exact Manifest
+source segments. Adaptive Interaction Profiles are living derived views. A
+file-only Manifest scan is the baseline; an optional local SQLite projection may
+accelerate lookup and aggregation but remains disposable and contains no
+conversation text.
 
 ## Interaction Observation
 
