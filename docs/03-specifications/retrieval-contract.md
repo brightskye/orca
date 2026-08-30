@@ -4,13 +4,13 @@ title: Orca Retrieval Contract
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: planned
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
 last_reviewed: 2026-08-29
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 supersedes: []
 projection-policy: orca-retrieval-projection/0.1
 ---
@@ -173,8 +173,9 @@ This interface preserves the current accepted Recall rules in the
 among comparably relevant selected results; older unconditional canonical-first
 material is not current behavior.
 
-Recall, projection reconciliation, the explicit skill, and the MCP surface are
-not implemented. See [Current Status](../STATUS.md).
+Recall and projection reconciliation are implemented behind a local explicit
+Python interface. Operator skill and MCP wiring belongs to the runtime
+milestone. See [Current Status](../STATUS.md).
 
 ## Acceptance criteria
 

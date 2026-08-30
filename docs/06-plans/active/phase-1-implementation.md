@@ -220,15 +220,15 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Build validated current-record, summary, conflict, authority, and exact-
+- [x] Build validated current-record, summary, conflict, authority, and exact-
   conversation Retrieval Projections from permitted artifacts.
-- [ ] Apply authority, visibility, project, and status filters before Adapter
+- [x] Apply authority, visibility, project, and status filters before Adapter
   ranking, then enforce relevance, overlap collapse, ordering, and budgets.
-- [ ] Wire AgentCairn as the initial replaceable Adapter over prevalidated local
+- [x] Wire AgentCairn as the initial replaceable Adapter over prevalidated local
   projections without enabling its native capture, remember, or canonical path.
-- [ ] Expose the accepted local explicit recall surface and return provenance-
+- [x] Expose the accepted local explicit recall surface and return provenance-
   labelled Recall Results without an extra summarization call.
-- [ ] Rebuild or reconcile disposable indexes without broad fallback vault scans.
+- [x] Rebuild or reconcile disposable indexes without broad fallback vault scans.
 
 ### Exit criteria
 
@@ -401,6 +401,12 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   Interaction Profiles, accepted activation/conflict/replacement/expiry rules,
   and fixed bounded guidance selection shared by all context boundaries. The
   aligned active suite passed 117 deterministic tests.
+- 2026-08-30 — Milestone 5 implemented explicit bounded Recall over validated
+  projections, hard filters before ranking, the governed local AgentCairn BM25
+  adapter over prefiltered projections, deterministic provenance-labelled
+  excerpts, exact-conversation behavior, and private disposable index rebuild,
+  hash validation, and missing-index failure. The aligned active suite passed
+  128 deterministic tests.
 
 ## Implementation review log
 

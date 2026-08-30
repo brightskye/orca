@@ -142,32 +142,35 @@ uv run --extra agentcairn python -m unittest \
   tests/step3/test_publication.py \
   tests/interaction/test_interaction.py \
   tests/interaction/test_pipeline.py \
+  tests/retrieval/test_retrieval.py \
   tests/agentcairn/test_distiller.py
 ```
 
 Expected result for the current checkout:
 
 ```text
-Ran 117 tests
+Ran 128 tests
 
 OK
 ```
 
-This command passed 117 tests on 2026-08-30. It covers the implemented capture,
+This command passed 128 tests on 2026-08-30. It covers the implemented capture,
 retry-spool primitives, Typed Memory and Project Summary contracts, project
 mapping, bounded segmented processing, conflicts, candidates,
 Manifest/checkpoint `0.2`, recoverable publication, scoped interaction profiles,
-deterministic guidance, and AgentCairn Distiller seams. It is not a runtime
+deterministic guidance, explicit bounded Recall, private disposable indexes,
+and AgentCairn adapters. It is not a runtime
 health check or Phase 1 acceptance.
 The accepted [Test Strategy](../07-quality/test-strategy.md) owns suite coverage.
 
 ## Routine operations
 
-**Unavailable:** Runtime startup interaction-guidance injection, explicit recall,
+**Unavailable:** Runtime startup interaction-guidance injection, an operator recall command,
 `$orca-save`, `$orca-recall`, conflict review, lifecycle-hook processing,
 periodic catch-up, index reconciliation, and routine vault operation are
-accepted design but have no active operator interface. The library-level
-interaction selector and profile rebuild are implemented and tested.
+accepted design but have no active operator interface. Library-level interaction
+selection, profile rebuild, explicit Recall, and index rebuild are implemented
+and tested.
 
 The intended flow remains in [Runtime Architecture](../02-architecture/runtime.md).
 Its design description must not be executed as if it were a current command.

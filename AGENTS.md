@@ -74,5 +74,6 @@ uv run --extra agentcairn python -m unittest \
   tests/step3/test_publication.py \
   tests/interaction/test_interaction.py \
   tests/interaction/test_pipeline.py \
+  tests/retrieval/test_retrieval.py \
   tests/agentcairn/test_distiller.py
 ```

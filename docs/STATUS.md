@@ -53,11 +53,11 @@ was accepted and promoted on 2026-08-30.
 | Owner and final-assistant Codex normalization, privacy filtering, partial-tail deferral, and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, synthetic deterministic capture tests, and Processor evidence/context separation tests |
 | Bounded Processor, Continuation Summary, and controlled proposal validation | Implemented | Category/total budgets, chunks, UTF-8 segments, overlap, related-record bounds, output limits, and controlled outcomes are directly tested |
 | Run Manifest, replay, checkpoint-last publication, `no_memory`, and source/segmentation conflict handling | Implemented | Manifest/checkpoint `0.2`, exact segment cursors, strict source/operation/output joins, mixed `0.1` reads, and publication-intent recovery are directly tested |
-| AgentCairn prevalidated Distiller seam | Partial | Adapter and focused tests exist; it is not wired into the Processor |
+| AgentCairn governed adapters | Implemented | Prevalidated Distiller seam and local BM25 retrieval over only prefiltered projections are directly tested; external semantic-provider runtime wiring remains Milestone 6 work |
 | Typed Memory Records, Project Summary, and project registration/relink | Implemented | Validated records, add/support/update, summary refresh, exact-worktree resolution, and recoverable mapping tests |
 | Knowledge Candidates, supersession, conflict records, and overflow | Implemented | Strict noncanonical schemas, stable variants, Owner-only review/disposition primitives, distinct placement, and joined publication tests |
 | Interaction observations, profiles, and compiled guidance | Implemented | Exact-source Manifest observations, content-free abstentions, rebuildable scoped profiles, lifecycle rules, and fixed bounded guidance selection are directly tested |
-| Recall, MCP surface, skills, and retrieval projections | Planned | Accepted design; no active implementation |
+| Explicit Recall and retrieval projections | Implemented | Hard-filtered bounded results, exact-conversation behavior, governed AgentCairn ranking, and private rebuildable hash-checked indexes are directly tested; operator surface wiring remains Milestone 6 work |
 | Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Partial | Secure redacted spool creation, three-attempt accounting, 72-hour expiry, content-free receipt, and success cleanup are tested library behavior; no hook or worker wiring exists |
 | Orca Status, Attention Items, and session reminder | Planned | Accepted content-free local interface; no active implementation |
 | Host configuration loading and WSL deployment | Planned | Accepted safe configuration examples exist; loader and deployed runtime do not |
@@ -78,9 +78,9 @@ These are implementation gaps, not permission to weaken the accepted contracts.
 
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
-- Phase 1 implementation: Milestones 1 through 4 are implemented and
-  deterministically verified. The next bounded slice is explicit recall and
-  replaceable retrieval.
+- Phase 1 implementation: Milestones 1 through 5 are implemented and
+  deterministically verified. The next bounded slice is validated configuration
+  and the private local runtime.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
@@ -103,13 +103,13 @@ common-use corpus, 95% overall, 90% per category, zero critical failures, and a
 separate mandatory edge-safety set. Implementation remains planned.
 
 Routine Phase 1 use remains blocked by the planned runtime, retrieval,
-retrieval, configuration, deployment, and readiness work listed above.
+configuration, deployment, and readiness work listed above.
 
 ## Verification
 
 - Repository and documentation review date: 2026-08-30.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current active regression command passed 117 tests on
+- The complete current active regression command passed 128 tests on
   2026-08-30; it is not Phase 1 end-to-end acceptance.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).
