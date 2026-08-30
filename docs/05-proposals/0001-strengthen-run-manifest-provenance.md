@@ -448,7 +448,7 @@ The accepted design was promoted into:
 - [Data Architecture](../02-architecture/data-architecture.md);
 - [Acceptance Plan](../07-quality/acceptance.md);
 - [Test Strategy](../07-quality/test-strategy.md); and
-- [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md).
+- [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md).
 
 Required deterministic tests must cover:
 
@@ -468,4 +468,4 @@ Required deterministic tests must cover:
 - **Roadmap:** [Phase 1](../ROADMAP.md#phase-1)
 - **Affected accepted owners:** [Provenance Ledger](../03-specifications/provenance-ledger.md), [Processing Pipeline](../03-specifications/processing-pipeline.md), and [Memory Model](../03-specifications/memory-model.md)
 - **Quality:** [Acceptance Plan](../07-quality/acceptance.md) and [Test Strategy](../07-quality/test-strategy.md)
-- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md)
+- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md)

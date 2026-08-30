@@ -9,8 +9,8 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Orca current status
@@ -31,9 +31,10 @@ diverges from accepted Phase 1 design.
 
 ## Current phase
 
-[Phase 1](ROADMAP.md#phase-1) is active. Orca has an initial local
-capture/processing/storage slice but is not deployed for routine use. Canonical
-automatic apply is disabled and absent.
+[Phase 1](ROADMAP.md#phase-1) is complete and was accepted by the Owner on
+2026-08-31. Orca implements the governed local capture, processing, provisional
+memory, interaction guidance, explicit Recall, provenance, recovery, and
+attention loop. Canonical automatic apply remains disabled and absent.
 
 The PDS-0.2 Core-profile migration is complete and was committed on 2026-08-30
 as `e686092`. The control plane, foundation, architecture, specifications,
@@ -77,19 +78,19 @@ was accepted and promoted on 2026-08-30.
 
 These are implementation gaps, not permission to weaken the accepted contracts.
 
-## Active work
+## Phase completion
 
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
-- Phase 1 implementation: Milestones 1 through 5 are implemented and
-  checkpointed. Milestone 6 implementation and deployment evidence are complete
-  and ready for its checkpoint. Milestone 7 acceptance reconciliation remains
-  active and final Owner acceptance is still required.
+- Phase 1 implementation: all seven milestones, all 18 acceptance scenarios,
+  the frozen quality gates, operational canaries, and Owner acceptance are
+  complete. Milestone 6 and readiness implementation are checkpointed at
+  `b8729d8`; the final accepted-status checkpoint follows this reconciliation.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
 
-## Open decisions and blockers
+## Decisions and remaining limitations
 
 Architecture, specification, and ADR extraction are accepted. ADR-0001 remains
 superseded history; ADR-0002 and ADR-0003 remain future-only proposal evidence;
@@ -109,16 +110,21 @@ separate mandatory edge-safety set. The Owner-approved frozen sets passed
 failures. A separately labelled synthetic semantic rerun passed its fixed gates;
 it is not deterministic proof.
 
-Routine Phase 1 acceptance remains blocked by reconciliation of the retained
-scenario evidence and final Owner acceptance. Automatic Canonical Markdown indexing remains
-explicitly deferred; canonical apply remains disabled.
+Phase 1 has no open acceptance blocker. All 18 scenarios have passing direct
+technical evidence and the ignored local acceptance record contains the Owner's
+accepted verdict. Automatic Canonical Markdown indexing remains explicitly
+deferred; canonical apply remains disabled. The one pending Knowledge Candidate
+continues through its normal Owner review workflow and does not reopen the phase
+gate.
 
 ## Verification
 
-- Repository and documentation review date: 2026-08-30.
+- Repository and documentation review date: 2026-08-31.
 - Code was compared with the active contracts during the PDS audit.
 - The complete current active regression command passed 185 tests on
-  2026-08-30; it is not Phase 1 end-to-end acceptance.
+  2026-08-30. Together with the retained operational and quality evidence it
+  satisfied the technical gate; the Owner accepted the complete evidence set on
+  2026-08-31.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).
 

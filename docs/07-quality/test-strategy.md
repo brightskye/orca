@@ -4,13 +4,13 @@ title: Phase 1 Test Strategy
 document_type: quality
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Phase 1 test strategy
@@ -313,7 +313,7 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 
 - **Documentation map:** [Documentation Index](../README.md)
 - **Acceptance scenarios:** [Phase 1 Acceptance Plan](acceptance.md)
-- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md)
+- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md)
 - **Specifications:** [Specification Index](../03-specifications/README.md)
 - **Operations:** [Phase 1 Local Runbook](../08-operations/runbook.md)
 - **Current evidence state:** [Current Status](../STATUS.md)

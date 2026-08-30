@@ -4,13 +4,13 @@ title: Phase 1 Implementation Plan
 document_type: implementation-plan
 status: accepted
 authority: informative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Phase 1 implementation plan
@@ -279,7 +279,7 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 - [x] Establish the canonical active test command and align local guidance and
   CI with every active Phase 1 suite.
-- [ ] Execute deterministic acceptance scenarios for capture, privacy, secrets,
+- [x] Execute deterministic acceptance scenarios for capture, privacy, secrets,
   processing, storage, conflicts, candidates, interaction, recall, replay,
   recovery, configuration, and deployment.
 - [x] Run separately labelled bounded semantic evaluations without presenting
@@ -305,17 +305,21 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   abstains/rejects, or exposes human attention.
 - The Owner accepts readiness; otherwise Phase 1 remains active and incomplete.
 
+### Completion
+
+The Owner accepted Orca Phase 1 readiness on 2026-08-31 after every work item
+and exit criterion above passed. The content-safe local acceptance record
+retains all 18 scenario verdicts, quality results, operational evidence,
+limitations, and the Owner verdict. This completes the plan; it does not
+authorize Phase 2 work or constitute a version `0.1.0` release.
+
 ## Dependencies and sequencing
 
-- Milestone 1 is the next bounded implementation slice.
-- Milestone 2 follows it and establishes the artifact foundation required by
-  later processing, interaction, and retrieval work.
-- Milestones 3–6 proceed in order unless a separately accepted plan revision
-  records a safe dependency change.
-- Milestone 7 depends on all prior milestone exit criteria and the accepted
-  [Acceptance Plan](../../07-quality/acceptance.md),
-  [Test Strategy](../../07-quality/test-strategy.md), and
-  [Phase 1 Local Runbook](../../08-operations/runbook.md).
+Milestones 1 through 7 completed in the accepted order. The retained
+[Acceptance Plan](../../07-quality/acceptance.md),
+[Test Strategy](../../07-quality/test-strategy.md), and
+[Phase 1 Local Runbook](../../08-operations/runbook.md) remain the evidence and
+operational references for the completed phase.
 
 ## Risks
 
@@ -429,12 +433,20 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   provider-prompt validation fix, the retained rerun passed 6/6 deterministic
   validity, 6/6 safety, and 5/6 usefulness. Formal scenario records, active-hook
   evidence, reconciliation, and Owner acceptance remain open.
+- 2026-08-30 — The enabled lifecycle canary and final technical reconciliation
+  passed. The installed dispatcher processed the authorized locally redacted
+  two-turn sample through exact Luna/xhigh, SessionEnd deduplicated it, detached
+  replay made no second semantic call, configured rebuild and explicit Recall
+  succeeded, queue state returned to zero, and canonical writes remained zero.
+  All 18 acceptance scenarios now have direct passing technical evidence in the
+  ignored content-safe acceptance record. Phase 1 is ready for Owner acceptance
+  but remains active until the Owner records that verdict.
 
 ## Implementation review log
 
 | ID and milestone | Type | Description | Evidence or affected files | Impact | Safe action taken | Status | Recommended Owner decision |
 |---|---|---|---|---|---|---|---|
-| IRL-001 — Milestone 1 | risk | Codex Desktop's internal rollout JSONL remains a non-public and drift-prone source format. | `src/orca_memory/conversation.py`; `tests/conversation/test_codex_capture.py` | Synthetic deterministic coverage proves fail-closed behavior but not the current host's private rollout shape. | Support only positively identified Owner events and Responses-style assistant items marked `phase: final_answer`; exclude unknown shapes and require an isolated canary before routine use. | open | Permit a private local format canary during Milestone 7 without copying rollout content into tracked evidence. |
+| IRL-001 — Milestone 1 | risk | Codex Desktop's internal rollout JSONL remains a non-public and drift-prone source format. | `src/orca_memory/conversation.py`; `tests/conversation/test_codex_capture.py` | Synthetic deterministic coverage and the authorized two-turn private format/lifecycle canaries pass; future drift must still fail closed. | Support only positively identified Owner events and Responses-style assistant items marked `phase: final_answer`; exclude unknown shapes and retain content-free canary evidence. | resolved | Requalify the connector if the private source format changes. |
 | IRL-002 — Milestone 3 | follow-up | Processor token accounting uses a versioned conservative UTF-8 byte estimate rather than a model-specific tokenizer. | `src/orca_memory/segmentation.py`; `tests/step3/test_segmentation.py` | Some multilingual or long inputs may be chunked earlier than strictly necessary, but accepted ceilings cannot be exceeded. | Record the estimator in segmentation parameters so a later governed policy can replace it without silent replay ambiguity. | resolved | None; retain the conservative policy unless measured routine-use evidence justifies a versioned replacement. |
 | IRL-003 — Milestone 6 | deployment evidence | The installed lifecycle dispatcher must be easy to stop without creating an unredacted provider path. | `src/orca_memory/configuration.py`; `src/orca_memory/codex_hook.py`; `.codex/hooks.json`; `tests/config/test_configuration.py`; `tests/runtime/test_codex_hook.py` | `lifecycle.enabled` defaults off and false returns before transcript access. The Owner enabled it and the bounded two-turn lifecycle canary passed SessionStart, PreCompact, the exact Luna/xhigh worker, SessionEnd deduplication, and detached replay. One secret-free noncanonical candidate was created; queue state returned to zero and canonical writes remained zero. | Keep unredacted sending impossible and retain the task-sandbox state-database limitation as an environment note rather than weakening the runtime. | resolved | The Owner can return the toggle to `false` whenever automatic processing should stop. |
 | IRL-004 — Milestone 7 | readiness evidence | The Owner-approved frozen 100-case common-use corpus and separate 12-case edge-safety set ran with immutable versions and content-safe results. | `evals/common-use/candidate-v1.yaml`; `evals/edge-safety/candidate-v1.yaml`; `src/orca_memory/evaluation.py` | Common-use passed 100/100 with zero critical failures and every category at 100%; edge safety passed 12/12. | Preserve the frozen manifests, digests, separate scoring, and ignored local result artifacts. | resolved | None. |

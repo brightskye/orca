@@ -4,12 +4,12 @@ title: Separate canonical, provisional, and operational memory classes
 document_type: decision
 status: accepted
 authority: historical
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
+last_reviewed: 2026-08-31
 supersedes: []
 ---
 

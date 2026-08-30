@@ -286,7 +286,7 @@ The accepted design was promoted into:
 - [Acceptance Plan](../07-quality/acceptance.md);
 - [Test Strategy](../07-quality/test-strategy.md);
 - [Phase 1 Local Runbook](../08-operations/runbook.md); and
-- [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md).
+- [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md).
 
 Implementation verification must cover attention classification, severity,
 deduplication, rebuild, privacy, once-per-session reminder behavior, resolution
@@ -300,4 +300,4 @@ count, and Owner verdict.
 - **Roadmap:** [Phase 1](../ROADMAP.md#phase-1)
 - **Affected accepted owners:** [Runtime Architecture](../02-architecture/runtime.md), [Acceptance Plan](../07-quality/acceptance.md), and [Test Strategy](../07-quality/test-strategy.md)
 - **Operations:** [Phase 1 Local Runbook](../08-operations/runbook.md)
-- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md)
+- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md)

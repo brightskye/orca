@@ -92,7 +92,7 @@ and no current document depends on them for accepted behavior.
 
 [Requirements](01-foundation/requirements.md) →
 [Architecture Overview](02-architecture/overview.md) → the owning specification
-in the registry above → [Phase 1 Implementation Plan](06-plans/active/phase-1-implementation.md)
+in the registry above → [Phase 1 Implementation Plan](06-plans/completed/phase-1-implementation.md)
 → [Current Status](STATUS.md)
 
 ### Investigate a runtime failure
@@ -162,7 +162,7 @@ specifications.
 | [RFC-0002](05-proposals/0002-define-project-registration-and-relinking.md) | Accepted project registration and relinking proposal record | Informative |
 | [RFC-0003](05-proposals/0003-define-human-attention-and-common-use-gate.md) | Accepted human-attention and common-use quality-gate proposal record | Informative |
 | [Plan Registry](06-plans/README.md) | Active/completed plan navigation and lifecycle | Informative |
-| [Phase 1 Implementation Plan](06-plans/active/phase-1-implementation.md) | Accepted Phase 1 sequence and exit criteria | Informative |
+| [Phase 1 Implementation Plan](06-plans/completed/phase-1-implementation.md) | Completed Phase 1 sequence and exit criteria | Informative |
 | [Acceptance Plan](07-quality/acceptance.md) | Accepted Phase 1 scenarios and gate | Normative |
 | [Test Strategy](07-quality/test-strategy.md) | Accepted test/evaluation mechanics and suite ownership | Normative |
 | [Phase 1 Local Runbook](08-operations/runbook.md) | Accepted truthful local procedures and explicit operational gaps | Normative |

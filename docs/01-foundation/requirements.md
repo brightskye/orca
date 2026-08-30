@@ -4,13 +4,13 @@ title: Orca Requirements
 document_type: requirements
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-29
-last_verified_against_code: 2026-08-29
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Orca requirements

@@ -428,7 +428,7 @@ The accepted design was promoted into:
 - [Acceptance Plan](../07-quality/acceptance.md);
 - [Test Strategy](../07-quality/test-strategy.md);
 - [Phase 1 Local Runbook](../08-operations/runbook.md); and
-- [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md).
+- [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md).
 
 Implementation verification must cover:
 
@@ -453,4 +453,4 @@ Implementation verification must cover:
 - **Affected accepted owners:** [Memory Model](../03-specifications/memory-model.md) and [Configuration](../03-specifications/configuration.md)
 - **Runtime:** [Runtime Architecture](../02-architecture/runtime.md)
 - **Quality:** [Acceptance Plan](../07-quality/acceptance.md) and [Test Strategy](../07-quality/test-strategy.md)
-- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md)
+- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md)

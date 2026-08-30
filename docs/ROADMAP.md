@@ -31,7 +31,7 @@ dependencies, and exit criteria.
 
 ## Phase 1
 
-**Status:** active
+**Status:** complete — Owner accepted 2026-08-31
 
 **Outcome:** Codex Desktop uses one WSL runtime and one local Orca vault for a
 complete governed memory loop: bounded capture and processing, provisional
@@ -56,11 +56,11 @@ backend.
   exposing a public service or mutating Canonical Memory automatically.
 
 Current progress belongs in [Current Status](STATUS.md), not this roadmap.
-The accepted execution sequence is in the [Phase 1 Implementation
-Plan](06-plans/active/phase-1-implementation.md).
+The completed execution sequence is in the [Phase 1 Implementation
+Plan](06-plans/completed/phase-1-implementation.md).
 The accepted evidence mapping is in the [Phase 1 Acceptance
-Plan](07-quality/acceptance.md); it does not establish that any exit criterion
-currently passes.
+Plan](07-quality/acceptance.md). The retained acceptance record and Owner
+verdict establish that all Phase 1 exit criteria passed on 2026-08-31.
 
 ## Phase 2
 

@@ -28,11 +28,11 @@ without making any agent or retrieval technology authoritative.
 
 ## Current status
 
-Phase 1 is active but incomplete and is not deployed for routine use. The
-current regression suite covers only the initial capture,
-Continuation-Summary/Manifest/checkpoint, and AgentCairn Distiller seams.
-Automatic canonical apply remains disabled and absent. See [Current
-Status](docs/STATUS.md) for the verified capability and divergence inventory.
+Phase 1 is complete and was accepted by the Owner on 2026-08-31. The local
+governed-memory loop, lifecycle hooks, explicit Recall, recovery, attention,
+frozen quality gates, and operational canaries passed. Automatic canonical
+apply remains disabled and absent. See [Current Status](docs/STATUS.md) for the
+verified capability and limitation inventory.
 
 Phase 2 and Phase 3 are candidate directions, not accepted exact designs. The
 [Roadmap](docs/ROADMAP.md) owns their status and intended outcomes.

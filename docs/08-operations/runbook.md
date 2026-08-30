@@ -4,22 +4,21 @@ title: Phase 1 Local Runbook
 document_type: runbook
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Phase 1 local runbook
 
 ## Purpose
 
-Describe only the procedures an operator can execute against the current Phase
-1 repository and state plainly where the designed runtime has no runnable
-operator interface yet.
+Describe the supported local Phase 1 operator procedures and state their
+authority, privacy, recovery, and deployment limits plainly.
 
 ## This document owns
 
@@ -288,7 +287,8 @@ governed sources. A mismatch fails closed without broad Recall fallback.
 
 ## Known limitations
 
-- Phase 1 is not deployed for routine use.
+- Phase 1 is accepted for the configured local runtime. The lifecycle toggle is
+  currently enabled and remains the Owner's immediate stop control.
 - The CLI and isolated local loop are verified with synthetic data. One
   authorized, redacted two-turn private provider/candidate canary passed; it did
   not establish broad routine usefulness.
@@ -298,6 +298,9 @@ governed sources. A mismatch fails closed without broad Recall fallback.
   provider worker and replay required normal local Codex state access.
 - Automatic future-session handling is currently enabled. Set the exact boolean
   back to `false` to stop it before transcript access.
+- The configured rebuild and explicit Recall procedures passed after the
+  enabled canary. Recall correctly returned no candidate content because
+  Knowledge Candidates are excluded from retrieval projections.
 - The accepted Acceptance Plan and Test Strategy define quality authority but
   do not make unavailable runtime procedures executable.
 - No procedure in this runbook authorizes Canonical Memory mutation, public

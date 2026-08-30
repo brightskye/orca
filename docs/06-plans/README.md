@@ -9,7 +9,7 @@ applies_to:
   - all-phases
 owners:
   - project-owner
-last_reviewed: 2026-08-30
+last_reviewed: 2026-08-31
 ---
 
 # Orca plan registry
@@ -30,13 +30,13 @@ second source of requirements, design, or current status.
 
 ## Active plans
 
-| Plan | Status | Roadmap phase | Execution authority |
-|---|---|---|---|
-| [Phase 1 Implementation Plan](active/phase-1-implementation.md) | Accepted | [Phase 1](../ROADMAP.md#phase-1) | Active execution plan |
+No implementation plan is currently active.
 
 ## Completed plans
 
-No plan has completed under the PDS plan lifecycle.
+| Plan | Status | Roadmap phase | Completion authority |
+|---|---|---|---|
+| [Phase 1 Implementation Plan](completed/phase-1-implementation.md) | Completed | [Phase 1](../ROADMAP.md#phase-1) | Owner acceptance recorded 2026-08-31 |
 
 ## Lifecycle
 

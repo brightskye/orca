@@ -4,13 +4,13 @@ title: Orca Integration Architecture
 document_type: architecture
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 related:
   - ARCH-OVERVIEW
   - REQ-ORCA

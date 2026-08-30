@@ -4,13 +4,13 @@ title: Orca Memory Model Specification
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 supersedes: []
 version: orca-memory-record/0.13
 filename-policy: orca-memory-filename/0.1

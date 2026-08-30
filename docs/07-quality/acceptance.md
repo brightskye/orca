@@ -4,13 +4,13 @@ title: Phase 1 Acceptance Plan
 document_type: quality
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 ---
 
 # Phase 1 acceptance plan
@@ -332,7 +332,7 @@ Detailed test mechanics and suite placement belong to the
 
 ## Phase gate
 
-Phase 1 remains active until:
+Phase 1 passed this gate on 2026-08-31 because:
 
 - every scenario above has a current `pass` verdict with retained evidence;
 - no unresolved failure or divergence can invalidate a requirement, security
@@ -346,7 +346,8 @@ Phase 1 remains active until:
   limits and are not used as deterministic proof; and
 - the Owner reviews the complete evidence set and accepts Phase 1 completion.
 
-This is a phase gate, not proof that version `0.1.0` was released.
+The Owner reviewed the complete evidence set and accepted Phase 1 readiness on
+2026-08-31. This acceptance is not proof that version `0.1.0` was released.
 
 ## Existing evidence boundary
 
@@ -356,8 +357,9 @@ rebuild/guidance/Recall loop, the installed default-off hook adapter, frozen cor
 execution, and negative public/canonical surfaces. The isolated redacted
 two-turn provider/candidate canary and labelled semantic evaluation are retained
 as separate limited evidence. This remains regression evidence, not a formal
-scenario pass by itself. The enabled lifecycle-hook canary now passes, but the
-reconciled scenario record and Owner verdict are still absent.
+scenario pass by itself. The enabled lifecycle-hook canary, configured rebuild,
+explicit Recall, and reconciled content-safe scenario record now pass. The
+Owner verdict is accepted, so Phase 1 is complete.
 
 Historical canary evidence remains historical. A result labelled
 `PASS — SMALL SAMPLE` keeps that exact limitation and cannot become general or
@@ -380,7 +382,7 @@ structure only, not deployed behavior.
 
 - **Documentation map:** [Documentation Index](../README.md)
 - **Roadmap:** [Phase 1](../ROADMAP.md#phase-1)
-- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/active/phase-1-implementation.md)
+- **Implementation sequence:** [Phase 1 Implementation Plan](../06-plans/completed/phase-1-implementation.md)
 - **Requirements:** [Orca Requirements](../01-foundation/requirements.md)
 - **Specifications:** [Specification Index](../03-specifications/README.md)
 - **Test mechanics:** [Test Strategy](test-strategy.md)
