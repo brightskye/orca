@@ -4,13 +4,13 @@ title: Orca Configuration Specification
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: planned
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 supersedes: []
 host-schema: orca-host-config/1
 vault-schema: orca-memory-config/0.1
@@ -89,6 +89,7 @@ defines its complete key shape.
 | Group | Required fields and rules |
 |---|---|
 | `provider` | `adapter` is a registered Semantic Provider Adapter identity; `model` is the exact configured model identity |
+| `lifecycle` | `enabled` is an exact boolean and defaults to `false`; it controls only automatic Codex lifecycle handling |
 | `cadence` | `catch_up_minutes` and `index_reconcile_minutes` are positive integers; both default to `15` |
 | `privacy` | `redaction_policy` is exactly `orca-secret-containment/0.1` |
 | `processing` | `processor_policy` is exactly `orca-processor/0.1` |
@@ -100,6 +101,15 @@ The provider Adapter and model have no repository-wide default. Both MUST be
 configured explicitly and recognized by the local runtime before a semantic
 call. Credentials and command arguments MUST NOT be stored in this file; an
 Adapter obtains them through its separately authorized local mechanism.
+
+`lifecycle.enabled: false` makes every installed Codex lifecycle hook a no-op
+after configuration validation and before transcript access, capture,
+redaction, queueing, guidance loading, or provider invocation. When it is
+`true`, automatic handling remains subject to the accepted eligibility and
+Secret Containment rules: permitted content is locally redacted before any
+retry spool or provider handoff, and a redaction failure sends nothing. There
+is no configuration mode that permits unredacted provider input. Explicit
+operator CLI commands are outside this automatic-lifecycle toggle.
 
 The `budgets` mapping exposes three groups whose exact defaults and behavioral
 meanings have one owner:
@@ -178,7 +188,7 @@ Atomic host-config replacement preserves every unrelated validated value.
 
 Successful loading returns one immutable validated configuration value for the
 current process. It contains normalized host, vault, runtime, connector,
-Project Root Mapping, provider, policy-version, cadence, and budget settings
+Project Root Mapping, provider, lifecycle, policy-version, cadence, and budget settings
 whose fields are defined by the applicable schemas. It contains no fallback guesses,
 raw credential values in diagnostics, or memory authority derived from paths.
 
@@ -201,6 +211,9 @@ raw credential values in diagnostics, or memory authority derived from paths.
 7. A Project Alias MUST resolve to one permanent `project_id`; an alias is never
    itself authority or project identity.
 8. A larger provider model window MUST NOT increase Orca budgets automatically.
+9. Automatic lifecycle handling MUST default off. A missing or non-boolean
+   lifecycle value MUST never enable it, and enabled handling MUST retain local
+   redaction as a mandatory, non-configurable precondition to provider input.
 
 ## Validation invariants
 
@@ -248,7 +261,8 @@ compatibility fixtures. This specification remains their human-readable owner.
 The connector key, mapping representation, vault schema, 15-minute cadence
 defaults, and conflict-on-difference precedence are accepted Phase 1 behavior.
 
-There is no active configuration loader or deployed runtime. See
+The strict read-only configuration loader is implemented. Private deployment
+and provider authorization remain operator and Owner gates. See
 [Current Status](../STATUS.md).
 
 ## Acceptance criteria

@@ -75,5 +75,13 @@ uv run --extra agentcairn python -m unittest \
   tests/interaction/test_interaction.py \
   tests/interaction/test_pipeline.py \
   tests/retrieval/test_retrieval.py \
+  tests/config/test_configuration.py \
+  tests/runtime/test_runtime.py \
+  tests/runtime/test_attention.py \
+  tests/runtime/test_application.py \
+  tests/runtime/test_codex_provider.py \
+  tests/runtime/test_codex_hook.py \
+  tests/acceptance/test_readiness_boundaries.py \
+  tests/acceptance/test_semantic_evaluation.py \
   tests/agentcairn/test_distiller.py
 ```

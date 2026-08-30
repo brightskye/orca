@@ -20,6 +20,10 @@ import re
 import tempfile
 from typing import Any, Callable, Iterable, Literal, Mapping, Protocol, Sequence
 
+import yaml
+
+from orca_memory.conflicts import parse_conflict_record
+from orca_memory.memory import parse_project_summary, parse_record
 from orca_memory.privacy import contains_secret
 
 
@@ -450,6 +454,65 @@ def rebuild_projection_index(
     return index
 
 
+def discover_projection_sources(vault_root: Path) -> tuple[ProjectionSource, ...]:
+    """Select only governed Shallow Memory artifacts for an explicit rebuild."""
+
+    resolved_vault = vault_root.resolve()
+    root = resolved_vault / "System" / "Orca Memory" / "shallow"
+    if not root.exists():
+        return ()
+    sources: list[ProjectionSource] = []
+    for path in sorted(root.glob("**/*.md")):
+        if path.name == "project.md":
+            continue
+        resolved = path.resolve()
+        if resolved_vault not in resolved.parents:
+            raise RetrievalValidationError("retrieval source escapes the configured vault")
+        relative = path.relative_to(resolved_vault).as_posix()
+        text = path.read_text(encoding="utf-8")
+        if path.name == "summary.md":
+            summary = parse_project_summary(text)
+            projection = projection_from_summary(summary, path=relative)
+            sources.append(_projection_source(projection, text))
+            continue
+        if "conversation-summaries" in path.parts:
+            metadata, body = _markdown_parts(text)
+            if metadata.get("schema_version") != "orca-conversation-continuation/1":
+                raise RetrievalValidationError("invalid Conversation Continuation Summary")
+            conversation_id = metadata.get("conversation_id")
+            project_id = metadata.get("project_id")
+            if not isinstance(conversation_id, str) or not conversation_id:
+                raise RetrievalValidationError("continuation lacks conversation identity")
+            scope = "project" if project_id is not None else (
+                "unassigned" if "unassigned" in path.parts else "general"
+            )
+            scope_id = project_id if scope == "project" else scope
+            structural_id = f"conv:{path.stem}"
+            projection = projection_from_conversation(
+                conversation_id=conversation_id,
+                structural_id=structural_id,
+                path=relative,
+                source_text=text,
+                meaning=body,
+                scope=scope,
+                scope_id=scope_id,
+                project_id=project_id,
+            )
+            sources.append(_projection_source(projection, text))
+            continue
+        try:
+            record = parse_record(text)
+            projection = projection_from_memory(record, path=relative)
+            sources.append(_projection_source(projection, text))
+        except ValueError:
+            conflict = parse_conflict_record(text)
+            sources.extend(
+                _projection_source(projection, text)
+                for projection in projections_from_conflict(conflict, path=relative)
+            )
+    return tuple(sources)
+
+
 @dataclass(frozen=True)
 class AdapterHit:
     projection_id: str
@@ -731,14 +794,27 @@ class RecallService:
         adapter: RetrievalAdapter,
         *,
         project_alias_resolver: Callable[[str], str | None] | None = None,
+        total_tokens: int = MAX_TOTAL_TOKENS,
+        per_document_tokens: int = MAX_DOCUMENT_TOKENS,
+        exact_continuation_tokens: int = EXACT_CONTINUATION_TOKENS,
     ) -> None:
         if not isinstance(index, ProjectionIndex):
             raise TypeError("Recall requires a ProjectionIndex")
         if not hasattr(adapter, "rank") or not callable(adapter.rank):
             raise TypeError("Recall requires a RetrievalAdapter")
+        for name, value, ceiling in (
+            ("total_tokens", total_tokens, MAX_TOTAL_TOKENS),
+            ("per_document_tokens", per_document_tokens, MAX_DOCUMENT_TOKENS),
+            ("exact_continuation_tokens", exact_continuation_tokens, EXACT_CONTINUATION_TOKENS),
+        ):
+            if not isinstance(value, int) or isinstance(value, bool) or not 0 < value <= ceiling:
+                raise RetrievalValidationError(f"Recall {name} exceeds the accepted bound")
         self._index = index
         self._adapter = adapter
         self._project_alias_resolver = project_alias_resolver
+        self._total_tokens = total_tokens
+        self._per_document_tokens = per_document_tokens
+        self._exact_continuation_tokens = exact_continuation_tokens
 
     def recall(self, request: RecallRequest) -> RecallResponse:
         """Perform one explicit bounded recall; no semantic summarization call."""
@@ -932,8 +1008,8 @@ class RecallService:
             selected.append((projection, score))
         return selected, omitted
 
-    @staticmethod
     def _make_results(
+        self,
         ranked: Sequence[tuple[RetrievalProjection, float]],
         question: str,
         *,
@@ -942,17 +1018,17 @@ class RecallService:
     ) -> tuple[list[RecallResult], list[str]]:
         results: list[RecallResult] = []
         omitted: list[str] = []
-        remaining = MAX_TOTAL_TOKENS
+        remaining = self._total_tokens
         for projection, score in ranked:
             if len(results) >= max_results:
                 omitted.append("result-count limit")
                 continue
             if exact and projection.artifact_kind == "conversation-continuation":
-                cap = EXACT_CONTINUATION_TOKENS
+                cap = self._exact_continuation_tokens
             elif exact and projection.artifact_kind == "project-summary":
-                cap = EXACT_PROJECT_SUMMARY_TOKENS
+                cap = min(EXACT_PROJECT_SUMMARY_TOKENS, self._per_document_tokens)
             else:
-                cap = MAX_DOCUMENT_TOKENS
+                cap = self._per_document_tokens
             cap = min(cap, remaining)
             if cap <= 0:
                 omitted.append("total token limit")
@@ -1054,6 +1130,38 @@ def _validate_timestamp(value: object, field: str) -> None:
 
 def _sha256(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _projection_source(
+    projection: RetrievalProjection, source_text: str
+) -> ProjectionSource:
+    return ProjectionSource(
+        path=projection.path,
+        source_text=source_text,
+        meaning=projection.meaning,
+        artifact_kind=projection.artifact_kind,
+        authority=projection.authority,
+        scope=projection.scope,
+        scope_id=projection.scope_id,
+        status=projection.status,
+        projection_id=projection.projection_id,
+        memory_id=projection.memory_id,
+        visibility=projection.visibility,
+        memory_kind=projection.memory_kind,
+        conversation_id=projection.conversation_id,
+        structural_id=projection.structural_id,
+        source_updated_at=projection.source_updated_at,
+    )
+
+
+def _markdown_parts(text: str) -> tuple[dict[str, Any], str]:
+    if not text.startswith("---\n") or "\n---\n" not in text[4:]:
+        raise RetrievalValidationError("invalid structural Markdown frontmatter")
+    marker = text.index("\n---\n", 4)
+    metadata = yaml.safe_load(text[4:marker])
+    if not isinstance(metadata, dict):
+        raise RetrievalValidationError("invalid structural Markdown frontmatter")
+    return metadata, text[marker + 5 :].strip()
 
 
 def _require_projection(value: RetrievalProjection | None) -> RetrievalProjection:
@@ -1163,6 +1271,7 @@ __all__ = [
     "RetrievalUnavailable",
     "RetrievalValidationError",
     "build_projection",
+    "discover_projection_sources",
     "explicit_recall",
     "load_projection_index",
     "projection_from_conversation",

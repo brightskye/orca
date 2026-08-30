@@ -53,6 +53,8 @@ class ProcessingInput:
     preceding_turn: str | None = None
     project_summary: str | None = None
     related_records: tuple[object, ...] = ()
+    scope_kind: str | None = None
+    scope_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -204,6 +206,8 @@ class Processor:
                 preceding or None,
                 project_summary,
                 selected_related,
+                scope_kind,
+                scope_id,
             )
         )
         if not isinstance(proposal, ProcessingProposal):

@@ -299,11 +299,21 @@ class RetrievalTests(unittest.TestCase):
         projection = build_projection(_source("large", meaning))
         assert projection is not None
         response = RecallService(
-            ProjectionIndex((projection,)), RecordingAdapter()
+            ProjectionIndex((projection,)),
+            RecordingAdapter(),
+            total_tokens=100,
+            per_document_tokens=50,
+            exact_continuation_tokens=80,
         ).recall(RecallRequest(question="deployment"))
         self.assertEqual(len(response.results), 1)
-        self.assertLessEqual(len(response.results[0].excerpt.split()), MAX_DOCUMENT_TOKENS)
-        self.assertLessEqual(len(response.results[0].excerpt.split()) + 12, MAX_TOTAL_TOKENS)
+        self.assertLessEqual(len(response.results[0].excerpt.split()), 50)
+        self.assertLessEqual(len(response.results[0].excerpt.split()) + 12, 100)
+        with self.assertRaisesRegex(RetrievalValidationError, "accepted bound"):
+            RecallService(
+                ProjectionIndex((projection,)),
+                RecordingAdapter(),
+                total_tokens=MAX_TOTAL_TOKENS + 1,
+            )
 
         unavailable_adapter = RecordingAdapter()
         with self.assertRaises(RetrievalUnavailable):

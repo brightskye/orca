@@ -53,21 +53,24 @@ was accepted and promoted on 2026-08-30.
 | Owner and final-assistant Codex normalization, privacy filtering, partial-tail deferral, and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, synthetic deterministic capture tests, and Processor evidence/context separation tests |
 | Bounded Processor, Continuation Summary, and controlled proposal validation | Implemented | Category/total budgets, chunks, UTF-8 segments, overlap, related-record bounds, output limits, and controlled outcomes are directly tested |
 | Run Manifest, replay, checkpoint-last publication, `no_memory`, and source/segmentation conflict handling | Implemented | Manifest/checkpoint `0.2`, exact segment cursors, strict source/operation/output joins, mixed `0.1` reads, and publication-intent recovery are directly tested |
-| AgentCairn governed adapters | Implemented | Prevalidated Distiller seam and local BM25 retrieval over only prefiltered projections are directly tested; external semantic-provider runtime wiring remains Milestone 6 work |
+| AgentCairn governed adapters | Implemented | Prevalidated Distiller seam and local BM25 retrieval over only prefiltered projections are directly tested; the separate Codex CLI provider canary passed on one authorized redacted sample |
 | Typed Memory Records, Project Summary, and project registration/relink | Implemented | Validated records, add/support/update, summary refresh, exact-worktree resolution, and recoverable mapping tests |
 | Knowledge Candidates, supersession, conflict records, and overflow | Implemented | Strict noncanonical schemas, stable variants, Owner-only review/disposition primitives, distinct placement, and joined publication tests |
 | Interaction observations, profiles, and compiled guidance | Implemented | Exact-source Manifest observations, content-free abstentions, rebuildable scoped profiles, lifecycle rules, and fixed bounded guidance selection are directly tested |
-| Explicit Recall and retrieval projections | Implemented | Hard-filtered bounded results, exact-conversation behavior, governed AgentCairn ranking, and private rebuildable hash-checked indexes are directly tested; operator surface wiring remains Milestone 6 work |
-| Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Partial | Secure redacted spool creation, three-attempt accounting, 72-hour expiry, content-free receipt, and success cleanup are tested library behavior; no hook or worker wiring exists |
-| Orca Status, Attention Items, and session reminder | Planned | Accepted content-free local interface; no active implementation |
-| Host configuration loading and WSL deployment | Planned | Accepted safe configuration examples exist; loader and deployed runtime do not |
+| Explicit Recall and retrieval projections | Implemented | Hard-filtered bounded results, exact-conversation behavior, governed AgentCairn ranking, private rebuildable hash-checked indexes, and the local explicit CLI are directly tested |
+| Lifecycle hooks, queue, retry spool, catch-up scheduling, and explicit save | Implemented, installed, enabled canary passed | The Owner-controlled toggle remains available and unredacted input remains impossible. The authorized two-turn canary passed SessionStart, PreCompact, exact Luna/xhigh processing, SessionEnd deduplication, and detached replay; the queue returned to zero |
+| Orca Status, Attention Items, and session reminder | Implemented | Content-free collection, stable IDs, rebuild, routes, counts, privacy, failure visibility, and once-per-session suppression are directly tested |
+| Host configuration loading and WSL deployment | Implemented for Phase 1 | Strict host/vault configuration validates; default-off and enabled paths are directly verified. The enabled private canary produced one secret-free noncanonical candidate, one Manifest/checkpoint pair, one review Attention Item, and no canonical output |
 | Canonical automatic apply | Deliberately absent | Disabled and unexposed by Phase 1 governance |
 
 ## Known divergence
 
-- Runtime hooks, retrieval reconciliation, and routine deployment are designed
-  but not implemented. Secure retry primitives and interaction consolidation
-  are implemented library behavior but are not yet wired into a local runtime.
+- The private local runtime and retrieval reconciliation are implemented and
+  synthetically integrated. One authorized redacted private sample passed the
+  provider/candidate path. The installed lifecycle dispatcher is verified both
+  off and enabled on the bounded two-turn sample. The task sandbox blocks nested
+  Codex state-database writes; normal local Codex state access was required for
+  the provider worker and detached replay.
 - Codex's internal rollout format remains non-public. The connector supports the
   accepted Responses-style `final_answer` marker and fails closed on drift, but
   isolated host-format verification remains required before routine use.
@@ -79,8 +82,9 @@ These are implementation gaps, not permission to weaken the accepted contracts.
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
 - Phase 1 implementation: Milestones 1 through 5 are implemented and
-  deterministically verified. The next bounded slice is validated configuration
-  and the private local runtime.
+  checkpointed. Milestone 6 implementation and deployment evidence are complete
+  and ready for its checkpoint. Milestone 7 acceptance reconciliation remains
+  active and final Owner acceptance is still required.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
@@ -100,16 +104,20 @@ implemented and deterministically tested.
 RFC-0003 resolved human-attention visibility and readiness measurement: one
 content-free reminder per session for any unresolved item, a minimum 100-case
 common-use corpus, 95% overall, 90% per category, zero critical failures, and a
-separate mandatory edge-safety set. Implementation remains planned.
+separate mandatory edge-safety set. The Owner-approved frozen sets passed
+100/100 common-use cases and 12/12 edge-safety cases with zero critical
+failures. A separately labelled synthetic semantic rerun passed its fixed gates;
+it is not deterministic proof.
 
-Routine Phase 1 use remains blocked by the planned runtime, retrieval,
-configuration, deployment, and readiness work listed above.
+Routine Phase 1 acceptance remains blocked by reconciliation of the retained
+scenario evidence and final Owner acceptance. Automatic Canonical Markdown indexing remains
+explicitly deferred; canonical apply remains disabled.
 
 ## Verification
 
 - Repository and documentation review date: 2026-08-30.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current active regression command passed 128 tests on
+- The complete current active regression command passed 185 tests on
   2026-08-30; it is not Phase 1 end-to-end acceptance.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).

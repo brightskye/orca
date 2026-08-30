@@ -1,0 +1,24 @@
+schema_version: orca-edge-safety-set/0.1
+set_id: phase1-edge-safety-v1
+corpus_version: phase1-edge-safety/1
+rubric_version: orca-edge-safety-rubric/0.1
+status: frozen-owner-approved
+hash_convention: orca-frozen-sha256/canonical-json-approval-digest-omitted/0.1
+accepted_outcomes: [safe-success, clear-abstention, clear-rejection, human-attention]
+cases:
+  - {case_id: EDGE-001, scenario: private-conversation, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_private_session_excludes_all_content, expected: clear-rejection}
+  - {case_id: EDGE-002, scenario: credential-in-source, selector: tests.conversation.test_retry_spool.RetrySpoolTests.test_unredacted_secret_and_unsafe_permissions_fail_closed, expected: clear-rejection}
+  - {case_id: EDGE-003, scenario: credential-in-provider-output, selector: tests.step3.test_pipeline.Step3PipelineTests.test_secret_in_semantic_output_fails_before_publication, expected: clear-rejection}
+  - {case_id: EDGE-004, scenario: cross-project-recall, selector: tests.retrieval.test_retrieval.RetrievalTests.test_hard_filters_are_applied_before_adapter_ranking, expected: clear-rejection}
+  - {case_id: EDGE-005, scenario: unknown-project-root, selector: tests.project.test_registry.ProjectResolutionTests.test_missing_identity_is_an_error_and_unknown_root_needs_owner, expected: human-attention}
+  - {case_id: EDGE-006, scenario: conflicting-vault-paths, selector: tests.config.test_configuration.ConfigurationTests.test_conflicting_vault_sources_fail_without_echoing_private_paths, expected: clear-rejection}
+  - {case_id: EDGE-007, scenario: stale-retrieval-hash, selector: tests.retrieval.test_retrieval.RetrievalTests.test_disposable_index_rebuild_load_and_hash_drift_fail_without_scan, expected: human-attention}
+  - {case_id: EDGE-008, scenario: corrupt-publication-intent, selector: tests.step3.test_publication.PublicationTests.test_target_matching_neither_before_nor_after_requires_repair, expected: human-attention}
+  - {case_id: EDGE-009, scenario: partial-rollout-tail, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_partial_trailing_record_waits_at_last_complete_byte, expected: safe-success}
+  - {case_id: EDGE-010, scenario: repeated-hook-trigger, selector: tests.runtime.test_runtime.RuntimeTests.test_duplicate_hook_queues_once_and_worker_cleans_success, expected: safe-success}
+  - {case_id: EDGE-011, scenario: automatic-canonical-apply-attempt, selector: tests.agentcairn.test_distiller.OrcaDecisionDistillerTests.test_canonical_distillation_is_rejected, expected: clear-rejection}
+  - {case_id: EDGE-012, scenario: public-listener-attempt, selector: tests.acceptance.test_readiness_boundaries.ReadinessBoundaryTests.test_no_public_listener_or_canonical_apply_surface_is_present, expected: clear-rejection}
+approval:
+  owner: project-owner
+  approved_at: "2026-08-30"
+  frozen_sha256: ec5508954461045d5f5ee501eb48da94789313f808c2ea076cbe24c848adcaa2

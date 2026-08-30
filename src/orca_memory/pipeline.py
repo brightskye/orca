@@ -20,12 +20,16 @@ class Step3Pipeline:
         conversation: ConversationBatch,
         *,
         scope: MemoryScope,
+        budgets: BudgetConfig = DEFAULT_BUDGETS,
         preceding_turn: str | None = None,
     ) -> PublicationResult:
         """Process every bounded chunk and return the final chunk result."""
 
         return self.run_all(
-            conversation, scope=scope, preceding_turn=preceding_turn
+            conversation,
+            scope=scope,
+            budgets=budgets,
+            preceding_turn=preceding_turn,
         )[-1]
 
     def run_all(

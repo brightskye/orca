@@ -350,10 +350,14 @@ This is a phase gate, not proof that version `0.1.0` was released.
 
 ## Existing evidence boundary
 
-The current 12 focused tests passed together on 2026-08-30. They cover only the
-initial capture, Continuation-Summary/Manifest/checkpoint, and AgentCairn
-Distiller seams. They are regression evidence, not a pass for any complete
-Phase 1 scenario above.
+The current 185-test canonical command passed on 2026-08-30. It covers the
+implemented deterministic modules plus an isolated synthetic process/restart/
+rebuild/guidance/Recall loop, the installed default-off hook adapter, frozen corpus
+execution, and negative public/canonical surfaces. The isolated redacted
+two-turn provider/candidate canary and labelled semantic evaluation are retained
+as separate limited evidence. This remains regression evidence, not a formal
+scenario pass by itself. The enabled lifecycle-hook canary now passes, but the
+reconciled scenario record and Owner verdict are still absent.
 
 Historical canary evidence remains historical. A result labelled
 `PASS — SMALL SAMPLE` keeps that exact limitation and cannot become general or

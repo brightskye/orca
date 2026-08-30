@@ -1,0 +1,261 @@
+schema_version: orca-semantic-evaluation/0.1
+evaluation_id: phase1-semantic-v1
+dataset_version: phase1-semantic/1
+status: frozen-synthetic
+hash_convention: orca-semantic-sha256/canonical-json-digest-omitted/0.1
+provider:
+  adapter: codex-cli
+  model: gpt-5.6-luna
+  reasoning_effort: xhigh
+  version: orca-semantic-provider/0.1
+policy:
+  processor: orca-processor/0.1
+  redaction: orca-secret-containment/0.1
+  segmentation: orca-segmentation/0.1
+budgets:
+  model_window_tokens: 32768
+  input_tokens: 20000
+  output_tokens: 4000
+  new_evidence_tokens: 8000
+  preceding_overlap_tokens: 1000
+  continuation_summary_tokens: 2000
+  project_summary_tokens: 2000
+  related_records_tokens: 5000
+  max_related_records: 5
+sample_size: 6
+rubric:
+  version: orca-semantic-rubric/0.1
+  usefulness_minimum: 0.8
+  deterministic_validity_required: true
+  deterministic_safety_required: true
+limitations:
+  dataset: synthetic-nonprivate
+  sample_size: 6
+  semantic_quality: not-deterministic-proof
+  provider_sensitivity: provider-model-policy-sensitive
+  routine_use: owner-review-required
+cases:
+  - case_id: record-decision
+    evidence_class: durable-record
+    input:
+      turns:
+        - role: owner
+          text: The checkout service now requires signed release tags before deployment.
+        - role: assistant
+          text: Understood; this is a current deployment constraint.
+    expected:
+      outcome: durable-record
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required:
+            - operation: add
+              kind: constraint
+          forbidden: true
+        candidates:
+          required: []
+          forbidden: true
+        observations:
+          required: []
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required: []
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+  - case_id: record-knowledge
+    evidence_class: durable-record
+    input:
+      turns:
+        - role: owner
+          text: Orca stores derived summaries as noncanonical Markdown under the configured vault.
+        - role: assistant
+          text: That storage boundary is a durable system fact.
+    expected:
+      outcome: durable-record
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required:
+            - operation: add
+              kind: knowledge
+          forbidden: true
+        candidates:
+          required: []
+          forbidden: true
+        observations:
+          required: []
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required: []
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+  - case_id: controlled-abstention
+    evidence_class: controlled-abstention
+    input:
+      turns:
+        - role: owner
+          text: Suppose the vendor changed the retention rule; do not treat this as a fact.
+        - role: assistant
+          text: This statement is hypothetical and should not become memory.
+    expected:
+      outcome: controlled-abstention
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required: []
+          forbidden: true
+        candidates:
+          required: []
+          forbidden: true
+        observations:
+          required: []
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required:
+            - hypothetical
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+  - case_id: candidate-proposal
+    evidence_class: candidate-proposal
+    input:
+      turns:
+        - role: owner
+          text: "Record this proposed decision as a noncanonical Knowledge Candidate for later Owner review: move the staging endpoint to the new region."
+        - role: assistant
+          text: I will treat this as a proposal for review.
+    expected:
+      outcome: candidate
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required: []
+          forbidden: true
+        candidates:
+          required:
+            - operation: create
+              kind: decision
+          forbidden: true
+        observations:
+          required: []
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required: []
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+  - case_id: interaction-feedback
+    evidence_class: interaction-feedback
+    input:
+      turns:
+        - role: owner
+          text: Explain the rollout in plain language.
+        - role: assistant
+          text: The earlier explanation used technical terms and was too technical.
+        - role: owner
+          text: The previous response was too technical; from now on, please explain in plain language.
+    expected:
+      outcome: interaction-observation
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required: []
+          forbidden: true
+        candidates:
+          required: []
+          forbidden: true
+        observations:
+          required:
+            - dimension: technical-depth
+              context: explanation
+              evidence_class: direct-correction
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required: []
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+  - case_id: task-no-memory
+    evidence_class: controlled-abstention
+    input:
+      turns:
+        - role: owner
+          text: Remind me to check the deployment dashboard tomorrow.
+        - role: assistant
+          text: I cannot schedule reminders here.
+    expected:
+      outcome: controlled-abstention
+      usefulness: true
+      structure:
+        continuation: allowed
+        records:
+          required: []
+          forbidden: true
+        candidates:
+          required: []
+          forbidden: true
+        observations:
+          required: []
+          forbidden: true
+        observation_abstentions:
+          required: []
+          forbidden: true
+        abstentions:
+          required:
+            - task-or-reminder
+          forbidden: false
+        conflicts:
+          minimum: 0
+          maximum: 0
+        supersessions:
+          minimum: 0
+          maximum: 0
+        project_summary: forbidden
+frozen_sha256: 5e89f17e504653ef0ea1f0f8bfc72cf57c8cc6677bd22cae75f3aff42222fe42

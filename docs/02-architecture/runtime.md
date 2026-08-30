@@ -10,7 +10,7 @@ applies_to:
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 related:
   - ARCH-OVERVIEW
   - REQ-ORCA
@@ -46,6 +46,12 @@ concurrency boundaries, publication order, and recovery responsibilities.
 | Retrieval reconciliation | Rebuild or update disposable projections and indexes from current Markdown |
 
 No permanent daemon is required by the accepted design.
+
+Installed lifecycle hooks first load the validated vault setting
+`lifecycle.enabled`, which defaults to `false`. Disabled hooks return before
+transcript access or other automatic work. Enabled hooks follow the same
+mandatory local privacy and redaction path; the setting cannot enable
+unredacted provider input. Explicit operator commands are separate.
 
 ## Project setup flow
 
@@ -171,14 +177,13 @@ runtime behavior.
 
 ## Implementation boundary
 
-Owner-turn normalization, basic credential redaction, one Continuation Summary
-proposal, Run Manifest publication, replay detection, and checkpoint-last
-behavior exist in the initial slice. Hooks, assistant-context normalization,
-retry spooling, scheduling, complete processing budgets, typed records,
-interaction consolidation, recall, and index reconciliation remain planned or
-partial. Project Registration, Project Relink, and Project Mapping Intent
-recovery, Orca Status, and its session reminder are accepted but unimplemented.
-See [Current Status](../STATUS.md).
+The accepted library and local CLI surfaces now implement bounded hook queues,
+one-shot locking, retry handling, catch-up, recoverable publication, typed
+records, interaction guidance, explicit Recall, rebuild, Orca Status, and its
+session reminder. An isolated synthetic loop is verified. Installation against
+future private Codex sessions remains inactive pending separate Owner
+authorization; the authorized isolated redacted provider/candidate canary does
+not establish routine deployment. See [Current Status](../STATUS.md).
 
 ## Related documents
 

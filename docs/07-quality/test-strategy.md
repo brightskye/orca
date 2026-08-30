@@ -148,8 +148,16 @@ Scenario definitions and verdicts remain in the
 | `tests/interaction/test_interaction.py` | 12 | AGENTS and CI | Controlled observations, abstention, activation, conflict, replacement, expiry, scope precedence, overrides, and exact bounded templates |
 | `tests/interaction/test_pipeline.py` | 2 | AGENTS and CI | Exact-source Manifest admission, content-free abstention, replay, profile rebuild, text exclusion, and deterministic selection |
 | `tests/retrieval/test_retrieval.py` | 11 | AGENTS and CI | Projection/hash validation, hard filters, conflicts, relevance/authority ordering, duplicate collapse, exact conversation, budgets, governed AgentCairn ranking, and disposable-index recovery |
+| `tests/config/test_configuration.py` | 12 | AGENTS and CI | Strict schemas, precedence, paths, policy versions, default-off lifecycle toggle, budgets, provider registration, project mappings, examples, and ignored local state |
+| `tests/runtime/test_runtime.py` | 4 | AGENTS and CI | Hook deduplication, private spool cleanup, one-shot lock, three-attempt failure, content-free attention, catch-up, and idle behavior |
+| `tests/runtime/test_attention.py` | 4 | AGENTS and CI | Accepted attention sources, content-free stable views, rebuild, safe routes, and once-per-session reminders |
+| `tests/runtime/test_application.py` | 6 | AGENTS and CI | Isolated process/restart/rebuild/guidance/Recall loop, configured budgets, no automatic Recall, no canonical write, and local CLI lifecycle |
+| `tests/runtime/test_codex_provider.py` | 4 | AGENTS and CI | Ephemeral exact-model Codex CLI invocation, standard-input containment, structured proposal validation, and content-free failure behavior |
+| `tests/runtime/test_codex_hook.py` | 9 | AGENTS and CI | Official lifecycle payloads, default-off no-op before transcript access, source containment, mandatory redacted handoff, segment-aware replay, exact worker settings, safe failures, and hook configuration |
+| `tests/acceptance/test_readiness_boundaries.py` | 7 | AGENTS and CI | Frozen corpus distribution and digests, selector-backed execution, fail-closed scoring, separate edge set, and negative canonical/public surface |
+| `tests/acceptance/test_semantic_evaluation.py` | 5 | AGENTS and CI | Strict synthetic semantic manifest, separate usefulness/validity/safety scoring, allowed extras, content-safe failures, and immutable result retention |
 
-This 128-test inventory is a current regression baseline, not the complete Phase
+This 185-test inventory is a current regression baseline, not the complete Phase
 1 suite and not end-to-end acceptance.
 
 ## Current and target commands
@@ -177,10 +185,18 @@ uv run --extra agentcairn python -m unittest \
   tests/interaction/test_interaction.py \
   tests/interaction/test_pipeline.py \
   tests/retrieval/test_retrieval.py \
+  tests/config/test_configuration.py \
+  tests/runtime/test_runtime.py \
+  tests/runtime/test_attention.py \
+  tests/runtime/test_application.py \
+  tests/runtime/test_codex_provider.py \
+  tests/runtime/test_codex_hook.py \
+  tests/acceptance/test_readiness_boundaries.py \
+  tests/acceptance/test_semantic_evaluation.py \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 128 current tests on 2026-08-30. That verifies the
+This exact command passed all 185 current tests on 2026-08-30. That verifies the
 command and current regression baseline only; it does not satisfy the complete
 Phase 1 acceptance scenarios.
 

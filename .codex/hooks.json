@@ -1,0 +1,44 @@
+{
+  "description": "Local-only Orca Phase 1 lifecycle handoff.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"$(git rev-parse --show-toplevel)\" orca-codex-hook",
+            "timeout": 10,
+            "statusMessage": "Loading Orca interaction guidance"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"$(git rev-parse --show-toplevel)\" orca-codex-hook",
+            "timeout": 10,
+            "statusMessage": "Queueing bounded Orca capture"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "other",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run --project \"$(git rev-parse --show-toplevel)\" orca-codex-hook",
+            "timeout": 3,
+            "statusMessage": "Spooling bounded Orca capture"
+          }
+        ]
+      }
+    ]
+  }
+}

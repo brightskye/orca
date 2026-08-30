@@ -3,6 +3,8 @@ schema_version: orca-memory-config/0.1
 provider:
   adapter: replace-with-registered-adapter-id
   model: replace-with-model-id
+lifecycle:
+  enabled: false
 cadence:
   catch_up_minutes: 15
   index_reconcile_minutes: 15

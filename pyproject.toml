@@ -6,6 +6,10 @@ readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["PyYAML==6.0.3"]
 
+[project.scripts]
+orca = "orca_memory.cli:main"
+orca-codex-hook = "orca_memory.codex_hook:main"
+
 [project.optional-dependencies]
 agentcairn = ["agentcairn==0.25.2"]
 

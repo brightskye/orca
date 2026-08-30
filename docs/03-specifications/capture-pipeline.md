@@ -114,6 +114,12 @@ records and grant no authority.
 6. Secret Containment prevents further propagation; it does not claim to remove
    a secret already stored in the agent-owned source.
 
+When automatic lifecycle handling is disabled, the hook MUST stop before
+transcript access, capture, redaction, retry-spool creation, queueing, or
+provider invocation. This does not create an unredacted path: enabling the
+lifecycle retains every exclusion and redaction rule in this section, while a
+redaction failure sends nothing.
+
 ### Source completion and handoff
 
 1. A partial trailing JSONL record MUST remain unprocessed and wait for a later

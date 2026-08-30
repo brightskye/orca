@@ -4,7 +4,7 @@ title: Orca Deployment Architecture
 document_type: architecture
 status: accepted
 authority: normative
-implementation_status: planned
+implementation_status: partial
 applies_to:
   - phase-1
   - phase-2-candidate
@@ -12,7 +12,7 @@ applies_to:
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 related:
   - ARCH-OVERVIEW
   - PROJECT-ROADMAP
@@ -49,8 +49,11 @@ Windows host
 ```
 
 Phase 1 uses one Codex Desktop agent, one authorized WSL processor runtime, and
-one local vault. The active code exists, but this topology is not yet deployed
-for routine use.
+one local vault. The local CLI and composition root are implemented and tested
+against an isolated synthetic vault. One Owner-authorized redacted private
+provider/candidate canary passed, but routine lifecycle-hook deployment remains
+installed behind its default-off control. The Owner enabled it and the bounded
+two-turn lifecycle canary passed; the same vault toggle remains the stop control.
 
 ## Location boundaries
 

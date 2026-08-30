@@ -243,21 +243,21 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Load and validate host and vault configuration with the accepted source
+- [x] Load and validate host and vault configuration with the accepted source
   precedence, version, path, mapping, budget, cadence, retry, and unknown-key
   behavior.
-- [ ] Implement bounded `PreCompact`, `SessionEnd`, and explicit-save handoff to
+- [x] Implement bounded `PreCompact`, `SessionEnd`, and explicit-save handoff to
   one queued one-shot worker under the local processor lock.
-- [ ] Implement the secure local retry spool, three-attempt/72-hour lifecycle,
+- [x] Implement the secure local retry spool, three-attempt/72-hour lifecycle,
   content-free failure receipt, and successful cleanup.
-- [ ] Run periodic catch-up and index reconciliation through the same idempotent
+- [x] Run periodic catch-up and index reconciliation through the same idempotent
   path with no model call when no eligible work exists.
-- [ ] Connect startup, resume, and post-compaction continuation to the accepted
+- [x] Connect startup, resume, and post-compaction continuation to the accepted
   interaction-guidance selection interface.
-- [ ] Implement deterministic Attention Item collection, the local rebuildable
+- [x] Implement deterministic Attention Item collection, the local rebuildable
   Orca Status view, owning-workflow routes, and one counts-only reminder per
   session when any item remains unresolved.
-- [ ] Connect Codex Desktop to the local WSL runtime and configured vault without
+- [x] Connect Codex Desktop to the local WSL runtime and configured vault without
   exposing a public service or tracked private configuration.
 
 ### Exit criteria
@@ -277,18 +277,18 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Establish the canonical active test command and align local guidance and
+- [x] Establish the canonical active test command and align local guidance and
   CI with every active Phase 1 suite.
 - [ ] Execute deterministic acceptance scenarios for capture, privacy, secrets,
   processing, storage, conflicts, candidates, interaction, recall, replay,
   recovery, configuration, and deployment.
-- [ ] Run separately labelled bounded semantic evaluations without presenting
+- [x] Run separately labelled bounded semantic evaluations without presenting
   model quality as deterministic proof.
-- [ ] Run the Owner-approved frozen common-use corpus and separate edge-safety
+- [x] Run the Owner-approved frozen common-use corpus and separate edge-safety
   set with the accepted binary rubric and retained versions.
-- [ ] Exercise installation, routine operation, failure recovery, index rebuild,
+- [x] Exercise installation, routine operation, failure recovery, index rebuild,
   and restart against an isolated configured test vault.
-- [ ] Reconcile Current Status, implementation metadata, quality evidence, and
+- [x] Reconcile Current Status, implementation metadata, quality evidence, and
   the operational runbook with observed results.
 
 ### Exit criteria
@@ -407,6 +407,28 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   excerpts, exact-conversation behavior, and private disposable index rebuild,
   hash validation, and missing-index failure. The aligned active suite passed
   128 deterministic tests.
+- 2026-08-30 — Milestone 6 safe implementation added strict read-only
+  configuration, private hook queues, one-shot locking, retry/catch-up,
+  interaction startup, explicit Recall, rebuild, content-free Orca Status and
+  reminders, a bounded official Codex hook adapter, and a local CLI. A clean
+  isolated synthetic process/restart loop and the authorized redacted private
+  two-turn provider/candidate canary passed. The project hook dispatcher is now
+  installed behind a strict default-off Owner-controlled vault toggle. Its
+  disabled path was directly verified to return before transcript access; an
+  enabled lifecycle canary passed across SessionStart, PreCompact, the exact
+  one-shot provider worker, SessionEnd deduplication, and detached replay. The
+  task sandbox blocked nested Codex state-database writes, so the authorized
+  worker and replay ran with normal local Codex state access outside that task
+  sandbox. Queue state returned to zero, one secret-free noncanonical candidate
+  and one review Attention Item were created, and no canonical output appeared.
+- 2026-08-30 — Milestone 7 preparation aligned the 183-test canonical suite and
+  CI, added isolated end-to-end and negative-surface tests, and froze and ran
+  the Owner-approved 100-case common-use and 12-case edge-safety sets. Both
+  deterministic sets passed. A separately labelled six-case synthetic semantic
+  run initially exposed an interaction-proposal contract defect; after a narrow
+  provider-prompt validation fix, the retained rerun passed 6/6 deterministic
+  validity, 6/6 safety, and 5/6 usefulness. Formal scenario records, active-hook
+  evidence, reconciliation, and Owner acceptance remain open.
 
 ## Implementation review log
 
@@ -414,6 +436,10 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 |---|---|---|---|---|---|---|---|
 | IRL-001 — Milestone 1 | risk | Codex Desktop's internal rollout JSONL remains a non-public and drift-prone source format. | `src/orca_memory/conversation.py`; `tests/conversation/test_codex_capture.py` | Synthetic deterministic coverage proves fail-closed behavior but not the current host's private rollout shape. | Support only positively identified Owner events and Responses-style assistant items marked `phase: final_answer`; exclude unknown shapes and require an isolated canary before routine use. | open | Permit a private local format canary during Milestone 7 without copying rollout content into tracked evidence. |
 | IRL-002 — Milestone 3 | follow-up | Processor token accounting uses a versioned conservative UTF-8 byte estimate rather than a model-specific tokenizer. | `src/orca_memory/segmentation.py`; `tests/step3/test_segmentation.py` | Some multilingual or long inputs may be chunked earlier than strictly necessary, but accepted ceilings cannot be exceeded. | Record the estimator in segmentation parameters so a later governed policy can replace it without silent replay ambiguity. | resolved | None; retain the conservative policy unless measured routine-use evidence justifies a versioned replacement. |
+| IRL-003 — Milestone 6 | deployment evidence | The installed lifecycle dispatcher must be easy to stop without creating an unredacted provider path. | `src/orca_memory/configuration.py`; `src/orca_memory/codex_hook.py`; `.codex/hooks.json`; `tests/config/test_configuration.py`; `tests/runtime/test_codex_hook.py` | `lifecycle.enabled` defaults off and false returns before transcript access. The Owner enabled it and the bounded two-turn lifecycle canary passed SessionStart, PreCompact, the exact Luna/xhigh worker, SessionEnd deduplication, and detached replay. One secret-free noncanonical candidate was created; queue state returned to zero and canonical writes remained zero. | Keep unredacted sending impossible and retain the task-sandbox state-database limitation as an environment note rather than weakening the runtime. | resolved | The Owner can return the toggle to `false` whenever automatic processing should stop. |
+| IRL-004 — Milestone 7 | readiness evidence | The Owner-approved frozen 100-case common-use corpus and separate 12-case edge-safety set ran with immutable versions and content-safe results. | `evals/common-use/candidate-v1.yaml`; `evals/edge-safety/candidate-v1.yaml`; `src/orca_memory/evaluation.py` | Common-use passed 100/100 with zero critical failures and every category at 100%; edge safety passed 12/12. | Preserve the frozen manifests, digests, separate scoring, and ignored local result artifacts. | resolved | None. |
+| IRL-005 — Milestone 6 | boundary decision | Accepted documents identify Owner-governed canonical folders but define no deterministic Canonical Markdown schema or authority metadata that local rebuild can safely validate. | `docs/02-architecture/data-architecture.md`; `docs/03-specifications/retrieval-contract.md`; `src/orca_memory/retrieval.py` | Automatic rebuild selects only governed Shallow Memory artifacts; explicit prevalidated canonical projections remain supported. | Defer automatic Canonical Markdown indexing and fail closed rather than infer authority from folder placement. | resolved | Define and Owner-accept a versioned canonical projection adapter before enabling automatic discovery in a later phase. |
+| IRL-006 — Milestone 7 | semantic evaluation | The initial frozen synthetic semantic run failed because an interaction proposal populated mutually exclusive fields; the exact adapter contract was not stated in its prompt. | `src/orca_memory/codex_provider.py`; `tests/runtime/test_codex_provider.py`; `evals/semantic/frozen-v1.yaml` | The invalid proposal failed closed and published nothing. The narrow prompt/validation regression fix produced a passing retained rerun: 6/6 deterministic validity, 6/6 safety, and 5/6 usefulness. | Preserve both labelled results; do not alter the frozen rubric or tune further to erase the remaining evidence-class usefulness miss. | resolved | Treat the 5/6 usefulness score as a routine-use watch item, not deterministic proof. |
 
 ## Related documents
 

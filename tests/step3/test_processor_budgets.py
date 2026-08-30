@@ -61,6 +61,8 @@ class ProcessorBudgetTests(unittest.TestCase):
             budgets=BudgetConfig(preceding_turn_tokens=20),
         )
         self.assertIsNone(provider.request.preceding_turn)
+        self.assertEqual(provider.request.scope_kind, "general")
+        self.assertEqual(provider.request.scope_id, "general")
 
     def test_related_records_are_same_scope_current_and_bounded(self) -> None:
         provider = RecordingProvider(ProcessingProposal(None))

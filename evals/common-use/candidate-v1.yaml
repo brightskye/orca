@@ -1,0 +1,160 @@
+schema_version: orca-common-use-corpus/0.1
+corpus_id: phase1-common-use-v1
+corpus_version: phase1-common-use/1
+status: frozen-owner-approved
+hash_convention: orca-frozen-sha256/canonical-json-approval-digest-omitted/0.1
+rubric:
+  version: orca-common-use-rubric/0.1
+  outcome: binary
+  overall_minimum: 0.95
+  category_minimum: 0.90
+  critical_failures_allowed: 0
+categories:
+  capture-and-privacy:
+    case_range: [CAP-001, CAP-015]
+    case_count: 15
+    fixture_family: synthetic-supported-excluded-redacted-rollout-events
+    expected: supported evidence is normalized and every private unsupported or credential value is excluded or redacted
+    cases:
+      - {case_id: CAP-001, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_direct_normalization_redacts_secret_without_copying_rollout, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-002, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_duplicate_supported_identity_and_malformed_complete_json_fail_closed, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-003, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_malformed_complete_supported_record_fails_closed, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-004, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_only_explicit_final_assistant_output_is_context, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-005, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_only_positive_owner_event_is_normalized_in_memory, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-006, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_partial_trailing_record_waits_at_last_complete_byte, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-007, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_private_records_and_non_owner_sessions_are_excluded, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-008, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_private_session_excludes_all_content, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-009, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_repeated_normalization_is_deterministic_and_writes_nothing, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-010, selector: tests.conversation.test_codex_capture.CodexCaptureTests.test_start_offset_reads_only_the_requested_complete_range, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-011, selector: tests.conversation.test_retry_spool.RetrySpoolTests.test_expiry_replaces_content_with_content_free_receipt, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-012, selector: tests.conversation.test_retry_spool.RetrySpoolTests.test_only_three_automatic_attempts_and_success_removes_content, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-013, selector: tests.conversation.test_retry_spool.RetrySpoolTests.test_spool_contains_only_redacted_normalized_evidence_and_is_private, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-014, selector: tests.conversation.test_retry_spool.RetrySpoolTests.test_unredacted_secret_and_unsafe_permissions_fail_closed, expected: pass, critical_classes: [authority]}
+      - {case_id: CAP-015, selector: tests.runtime.test_codex_provider.CodexProviderTests.test_secret_like_input_is_rejected_before_provider_call, expected: pass, critical_classes: [authority]}
+  processing-and-provenance:
+    case_range: [PROC-001, PROC-020]
+    case_count: 20
+    fixture_family: synthetic-budgets-segments-replay-publication-faults
+    expected: bounded processing publishes one joined recoverable Manifest or fails retryably
+    cases:
+      - {case_id: PROC-001, selector: tests.step3.test_pipeline.Step3PipelineTests.test_assistant_context_alone_cannot_create_memory, expected: pass, critical_classes: []}
+      - {case_id: PROC-002, selector: tests.step3.test_pipeline.Step3PipelineTests.test_known_turn_with_different_hash_fails_closed, expected: pass, critical_classes: []}
+      - {case_id: PROC-003, selector: tests.step3.test_pipeline.Step3PipelineTests.test_manifest_allows_recovery_when_checkpoint_write_fails, expected: pass, critical_classes: []}
+      - {case_id: PROC-004, selector: tests.step3.test_pipeline.Step3PipelineTests.test_manifest_replay_skips_provider_and_repairs_missing_checkpoint, expected: pass, critical_classes: []}
+      - {case_id: PROC-005, selector: tests.step3.test_pipeline.Step3PipelineTests.test_no_memory_still_publishes_manifest_and_checkpoint, expected: pass, critical_classes: []}
+      - {case_id: PROC-006, selector: tests.step3.test_pipeline.Step3PipelineTests.test_provider_receives_owner_evidence_separate_from_assistant_context, expected: pass, critical_classes: []}
+      - {case_id: PROC-007, selector: tests.step3.test_pipeline.Step3PipelineTests.test_publishes_continuation_manifest_then_checkpoint, expected: pass, critical_classes: []}
+      - {case_id: PROC-008, selector: tests.step3.test_pipeline.Step3PipelineTests.test_secret_in_semantic_output_fails_before_publication, expected: pass, critical_classes: [authority]}
+      - {case_id: PROC-009, selector: tests.step3.test_typed_pipeline.TypedPipelineTests.test_add_materializes_storage_identity_and_joined_manifest_receipts, expected: pass, critical_classes: [authority]}
+      - {case_id: PROC-010, selector: tests.step3.test_typed_pipeline.TypedPipelineTests.test_partial_publication_recovers_without_second_provider_call, expected: pass, critical_classes: [authority]}
+      - {case_id: PROC-011, selector: tests.step3.test_typed_pipeline.TypedPipelineTests.test_project_change_requires_and_publishes_linked_summary, expected: pass, critical_classes: []}
+      - {case_id: PROC-012, selector: tests.step3.test_typed_pipeline.TypedPipelineTests.test_project_change_without_summary_fails_before_publication, expected: pass, critical_classes: [authority]}
+      - {case_id: PROC-013, selector: tests.step3.test_typed_pipeline.TypedPipelineTests.test_support_preserves_bytes_and_update_preserves_identity, expected: pass, critical_classes: [authority]}
+      - {case_id: PROC-014, selector: tests.step3.test_segmented_pipeline.SegmentedPipelineTests.test_oversized_turn_creates_sequential_manifests_and_exact_replay, expected: pass, critical_classes: []}
+      - {case_id: PROC-015, selector: tests.step3.test_segmented_pipeline.SegmentedPipelineTests.test_segmentation_parameter_change_requires_governed_reprocessing, expected: pass, critical_classes: []}
+      - {case_id: PROC-016, selector: tests.step3.test_provenance.ProvenanceTests.test_manifest_02_scan_detects_exact_replay_and_conflict, expected: pass, critical_classes: []}
+      - {case_id: PROC-017, selector: tests.step3.test_provenance.ProvenanceTests.test_manifest_rejects_broken_operation_output_join, expected: pass, critical_classes: []}
+      - {case_id: PROC-018, selector: tests.step3.test_provenance.ProvenanceTests.test_manifest_scan_rejects_missing_first_segment, expected: pass, critical_classes: []}
+      - {case_id: PROC-019, selector: tests.step3.test_provenance.ProvenanceTests.test_mixed_manifest_scan_preserves_legacy_receipt, expected: pass, critical_classes: []}
+      - {case_id: PROC-020, selector: tests.step3.test_provenance.ProvenanceTests.test_unsegmented_source_and_checkpoint_bind_exact_cursor, expected: pass, critical_classes: []}
+  project-and-memory:
+    case_range: [MEM-001, MEM-020]
+    case_count: 20
+    fixture_family: synthetic-project-record-candidate-conflict-lifecycle
+    expected: stable scoped noncanonical identity and accepted lifecycle outcome
+    cases:
+      - {case_id: MEM-001, selector: tests.memory.test_records.MemoryRecordTests.test_add_support_update_operations_enforce_scope_and_identity, expected: pass, critical_classes: [authority]}
+      - {case_id: MEM-002, selector: tests.memory.test_records.MemoryRecordTests.test_all_controlled_kinds_have_contract_directories, expected: pass, critical_classes: []}
+      - {case_id: MEM-003, selector: tests.memory.test_records.MemoryRecordTests.test_closed_record_uses_final_and_closure, expected: pass, critical_classes: []}
+      - {case_id: MEM-004, selector: tests.memory.test_records.MemoryRecordTests.test_conflict_and_supersede_are_explicitly_deferred, expected: pass, critical_classes: []}
+      - {case_id: MEM-005, selector: tests.memory.test_records.MemoryRecordTests.test_current_record_requires_current_and_only_none_review, expected: pass, critical_classes: []}
+      - {case_id: MEM-006, selector: tests.memory.test_records.MemoryRecordTests.test_parser_rejects_extra_fields_bad_schema_and_body_sections, expected: pass, critical_classes: []}
+      - {case_id: MEM-007, selector: tests.memory.test_records.MemoryRecordTests.test_proposals_cannot_assign_storage_owned_fields, expected: pass, critical_classes: []}
+      - {case_id: MEM-008, selector: tests.memory.test_records.MemoryRecordTests.test_render_parse_round_trip_has_exact_frontmatter_and_no_provenance, expected: pass, critical_classes: []}
+      - {case_id: MEM-009, selector: tests.memory.test_records.MemoryRecordTests.test_scopes_require_fixed_or_project_identity, expected: pass, critical_classes: [authority]}
+      - {case_id: MEM-010, selector: tests.memory.test_records.MemoryRecordTests.test_short_id_and_filename_are_deterministic, expected: pass, critical_classes: []}
+      - {case_id: MEM-011, selector: tests.memory.test_records.MemoryRecordTests.test_subject_slug_is_human_readable_portable_and_bounded, expected: pass, critical_classes: []}
+      - {case_id: MEM-012, selector: tests.memory.test_records.MemoryRecordTests.test_timestamps_are_utc_and_monotonic_storage_values, expected: pass, critical_classes: []}
+      - {case_id: MEM-013, selector: tests.memory.test_records.ProjectSummaryTests.test_project_summary_defaults_to_stable_ids_and_rejects_bad_relationships, expected: pass, critical_classes: []}
+      - {case_id: MEM-014, selector: tests.memory.test_records.ProjectSummaryTests.test_project_summary_has_separate_schema_and_validated_links, expected: pass, critical_classes: []}
+      - {case_id: MEM-015, selector: tests.memory.test_conflicts.ConflictTests.test_cross_scope_and_secret_positions_fail, expected: pass, critical_classes: [authority]}
+      - {case_id: MEM-016, selector: tests.memory.test_conflicts.ConflictTests.test_current_becomes_two_stable_variants, expected: pass, critical_classes: []}
+      - {case_id: MEM-017, selector: tests.memory.test_conflicts.ConflictTests.test_exact_variant_support_does_not_rewrite, expected: pass, critical_classes: []}
+      - {case_id: MEM-018, selector: tests.memory.test_conflicts.ConflictTests.test_explicit_supersede_preserves_identity_and_compact_lineage, expected: pass, critical_classes: [authority]}
+      - {case_id: MEM-019, selector: tests.memory.test_conflicts.ConflictTests.test_owner_review_selects_or_acknowledges_without_synthesizing, expected: pass, critical_classes: []}
+      - {case_id: MEM-020, selector: tests.memory.test_conflicts.ConflictTests.test_third_variant_requires_review_and_fourth_overflows, expected: pass, critical_classes: []}
+  interaction-behavior:
+    case_range: [INT-001, INT-010]
+    case_count: 10
+    fixture_family: synthetic-observation-lifecycle-precedence-guidance
+    expected: eligible scoped evidence compiles exact guidance and ambiguous or temporary evidence abstains
+    cases:
+      - {case_id: INT-001, selector: tests.interaction.test_interaction.ObservationTests.test_complete_feedback_context_admits_content_free_deterministic_observation, expected: pass, critical_classes: []}
+      - {case_id: INT-002, selector: tests.interaction.test_interaction.ObservationTests.test_controlled_values_and_general_context_fail_closed, expected: pass, critical_classes: []}
+      - {case_id: INT-003, selector: tests.interaction.test_interaction.ObservationTests.test_missing_or_reversed_context_abstains_without_classification, expected: pass, critical_classes: []}
+      - {case_id: INT-004, selector: tests.interaction.test_interaction.ProfileTests.test_three_distinct_conversations_activate_and_duplicates_count_once, expected: pass, critical_classes: []}
+      - {case_id: INT-005, selector: tests.interaction.test_interaction.ProfileTests.test_one_or_two_pending_and_expired_evidence_create_no_entry, expected: pass, critical_classes: []}
+      - {case_id: INT-006, selector: tests.interaction.test_interaction.ProfileTests.test_explicit_lasting_activates_immediately_without_expiry, expected: pass, critical_classes: []}
+      - {case_id: INT-007, selector: tests.interaction.test_interaction.ProfileTests.test_incompatible_explicit_evidence_conflicts_until_clear_replacement, expected: pass, critical_classes: []}
+      - {case_id: INT-008, selector: tests.interaction.test_interaction.ProfileTests.test_two_qualified_outcomes_become_conflicting_and_compile_nothing, expected: pass, critical_classes: []}
+      - {case_id: INT-009, selector: tests.interaction.test_interaction.GuidanceTests.test_exact_template_and_more_specific_scope_replaces_broader, expected: pass, critical_classes: []}
+      - {case_id: INT-010, selector: tests.interaction.test_interaction.GuidanceTests.test_owner_override_removes_profile_key_and_budget_never_truncates, expected: pass, critical_classes: []}
+  recall:
+    case_range: [REC-001, REC-020]
+    case_count: 20
+    fixture_family: synthetic-projection-filter-ranking-budget-rebuild
+    expected: explicit bounded authority-labelled Recall returns only prefiltered fresh projections
+    cases:
+      - {case_id: REC-001, selector: tests.retrieval.test_retrieval.RetrievalTests.test_agentcairn_adapter_is_replaceable_and_cannot_return_ineligible_items, expected: pass, critical_classes: []}
+      - {case_id: REC-002, selector: tests.retrieval.test_retrieval.RetrievalTests.test_budgets_bound_ordinary_results_and_never_scan_when_index_unavailable, expected: pass, critical_classes: []}
+      - {case_id: REC-003, selector: tests.retrieval.test_retrieval.RetrievalTests.test_canonical_first_only_within_relevance_tie, expected: pass, critical_classes: [authority]}
+      - {case_id: REC-004, selector: tests.retrieval.test_retrieval.RetrievalTests.test_conflict_projection_keeps_each_active_variant_without_a_winner, expected: pass, critical_classes: []}
+      - {case_id: REC-005, selector: tests.retrieval.test_retrieval.RetrievalTests.test_disposable_index_rebuild_load_and_hash_drift_fail_without_scan, expected: pass, critical_classes: [authority]}
+      - {case_id: REC-006, selector: tests.retrieval.test_retrieval.RetrievalTests.test_duplicate_identity_and_strong_overlap_collapse_before_result_limit, expected: pass, critical_classes: [authority]}
+      - {case_id: REC-007, selector: tests.retrieval.test_retrieval.RetrievalTests.test_exact_conversation_includes_only_associated_project_material, expected: pass, critical_classes: []}
+      - {case_id: REC-008, selector: tests.retrieval.test_retrieval.RetrievalTests.test_governed_local_agentcairn_ranks_only_prefiltered_projections, expected: pass, critical_classes: []}
+      - {case_id: REC-009, selector: tests.retrieval.test_retrieval.RetrievalTests.test_hard_filters_are_applied_before_adapter_ranking, expected: pass, critical_classes: []}
+      - {case_id: REC-010, selector: tests.retrieval.test_retrieval.RetrievalTests.test_project_alias_must_resolve_without_guessing, expected: pass, critical_classes: []}
+      - {case_id: REC-011, selector: tests.retrieval.test_retrieval.RetrievalTests.test_projection_hash_is_deterministic_and_stale_or_secret_sources_fail_closed, expected: pass, critical_classes: [authority]}
+      - {case_id: REC-012, selector: tests.step3.test_processor_budgets.ProcessorBudgetTests.test_context_overflow_fails_before_provider_call, expected: pass, critical_classes: []}
+      - {case_id: REC-013, selector: tests.step3.test_processor_budgets.ProcessorBudgetTests.test_generated_output_overflow_is_rejected, expected: pass, critical_classes: []}
+      - {case_id: REC-014, selector: tests.step3.test_processor_budgets.ProcessorBudgetTests.test_optional_preceding_turn_is_removed_before_call_when_over_limit, expected: pass, critical_classes: []}
+      - {case_id: REC-015, selector: tests.step3.test_processor_budgets.ProcessorBudgetTests.test_project_summary_context_is_forbidden_outside_project_scope, expected: pass, critical_classes: [authority]}
+      - {case_id: REC-016, selector: tests.step3.test_processor_budgets.ProcessorBudgetTests.test_related_records_are_same_scope_current_and_bounded, expected: pass, critical_classes: []}
+      - {case_id: REC-017, selector: tests.step3.test_segmentation.SegmentationTests.test_chunker_rejects_mixed_inputs_duplicates_and_reverse_timestamps, expected: pass, critical_classes: []}
+      - {case_id: REC-018, selector: tests.step3.test_segmentation.SegmentationTests.test_measure_context_is_repeatable_and_reports_complete_input, expected: pass, critical_classes: []}
+      - {case_id: REC-019, selector: tests.step3.test_segmentation.SegmentationTests.test_related_selection_is_current_same_scope_ranked_and_bounded, expected: pass, critical_classes: []}
+      - {case_id: REC-020, selector: tests.runtime.test_application.ApplicationTests.test_clean_local_process_restart_guidance_recall_and_rebuild, expected: pass, critical_classes: []}
+  runtime-and-recovery:
+    case_range: [RUN-001, RUN-015]
+    case_count: 15
+    fixture_family: synthetic-config-hook-lock-retry-status-restart
+    expected: one local recoverable path succeeds safely or exposes content-free attention
+    cases:
+      - {case_id: RUN-001, selector: tests.config.test_configuration.ConfigurationTests.test_conflicting_vault_sources_fail_without_echoing_private_paths, expected: pass, critical_classes: [authority]}
+      - {case_id: RUN-002, selector: tests.config.test_configuration.ConfigurationTests.test_defaults_and_lower_cadence_retry_and_budgets, expected: pass, critical_classes: []}
+      - {case_id: RUN-003, selector: tests.config.test_configuration.ConfigurationTests.test_local_private_and_generated_paths_are_git_ignored, expected: pass, critical_classes: [authority]}
+      - {case_id: RUN-004, selector: tests.config.test_configuration.ConfigurationTests.test_missing_relative_inaccessible_and_cross_location_paths_fail, expected: pass, critical_classes: []}
+      - {case_id: RUN-005, selector: tests.config.test_configuration.ConfigurationTests.test_project_mappings_require_unique_roots_and_existing_registry_identity, expected: pass, critical_classes: [authority]}
+      - {case_id: RUN-006, selector: tests.config.test_configuration.ConfigurationTests.test_provider_and_exact_policies_validate_without_calling_adapter, expected: pass, critical_classes: []}
+      - {case_id: RUN-007, selector: tests.config.test_configuration.ConfigurationTests.test_raised_nonpositive_and_inconsistent_budgets_fail, expected: pass, critical_classes: []}
+      - {case_id: RUN-008, selector: tests.config.test_configuration.ConfigurationTests.test_safe_examples_produce_immutable_idempotent_value_without_writes, expected: pass, critical_classes: []}
+      - {case_id: RUN-009, selector: tests.config.test_configuration.ConfigurationTests.test_unknown_duplicate_and_unsupported_schema_keys_fail_closed, expected: pass, critical_classes: [authority]}
+      - {case_id: RUN-010, selector: tests.config.test_configuration.ConfigurationTests.test_vault_configuration_symlink_cannot_escape_the_vault, expected: pass, critical_classes: []}
+      - {case_id: RUN-011, selector: tests.config.test_configuration.ConfigurationTests.test_vault_path_precedence_file_environment_and_normalized_equality, expected: pass, critical_classes: []}
+      - {case_id: RUN-012, selector: tests.runtime.test_runtime.RuntimeTests.test_catch_up_uses_same_path_and_empty_discovery_is_idle, expected: pass, critical_classes: []}
+      - {case_id: RUN-013, selector: tests.runtime.test_runtime.RuntimeTests.test_crash_retries_three_times_then_content_free_failure, expected: pass, critical_classes: []}
+      - {case_id: RUN-014, selector: tests.runtime.test_runtime.RuntimeTests.test_duplicate_hook_queues_once_and_worker_cleans_success, expected: pass, critical_classes: []}
+      - {case_id: RUN-015, selector: tests.runtime.test_runtime.RuntimeTests.test_lock_contention_and_idle_make_no_handler_call, expected: pass, critical_classes: []}
+critical_classes:
+  - authority
+  - privacy
+  - secret
+  - scope
+  - canonical-write
+  - identity
+  - silent-unrecoverable-failure
+approval:
+  owner: project-owner
+  approved_at: "2026-08-30"
+  frozen_sha256: 0a7637288660dacc6c07072c9a838da86e8982c6afae4b13e0ae8ed20b656d1a
