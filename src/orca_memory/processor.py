@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
-from orca_memory.conversation import ConversationBatch
+from orca_memory.conversation import ConversationBatch, NormalizedTurn
 from orca_memory.privacy import contains_secret
 
 
@@ -28,7 +28,8 @@ class ContinuationSummary:
 class ProcessingInput:
     """Bounded input visible to one semantic-provider call."""
 
-    conversation: ConversationBatch
+    owner_evidence: tuple[NormalizedTurn, ...]
+    assistant_context: tuple[NormalizedTurn, ...]
     previous_continuation: str | None
     project_id: str | None
 
@@ -74,10 +75,23 @@ class Processor:
         previous_continuation: str | None,
         project_id: str | None,
     ) -> ProcessedConversation:
-        if not conversation.turns:
-            raise ValueError("Processor requires at least one new turn")
+        owner_evidence = tuple(
+            turn for turn in conversation.turns if turn.source_role == "owner"
+        )
+        assistant_context = tuple(
+            turn for turn in conversation.turns if turn.source_role == "assistant"
+        )
+        if len(owner_evidence) + len(assistant_context) != len(conversation.turns):
+            raise ValueError("Processor received an unsupported source role")
+        if not owner_evidence:
+            raise ValueError("Processor requires at least one new Owner evidence turn")
         proposal = self._provider.distill(
-            ProcessingInput(conversation, previous_continuation, project_id)
+            ProcessingInput(
+                owner_evidence,
+                assistant_context,
+                previous_continuation,
+                project_id,
+            )
         )
         if not isinstance(proposal, ProcessingProposal):
             raise ValueError("semantic provider returned an invalid proposal")

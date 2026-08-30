@@ -129,29 +129,30 @@ Scenario definitions and verdicts remain in the
 
 | Suite | Current cases | Current route | Coverage boundary |
 |---|---:|---|---|
-| `tests/conversation/test_codex_capture.py` | 3 | AGENTS and CI | Owner-only normalization, basic redaction, deterministic no-write behavior |
-| `tests/step3/test_pipeline.py` | 6 | AGENTS only | Initial Continuation Summary, Manifest, replay, checkpoint, `no_memory`, output-secret, source-revision behavior |
+| `tests/conversation/test_codex_capture.py` | 10 | AGENTS and CI | Owner/final-assistant classification, bounded offsets, exclusions, privacy, partial tails, drift failure, redaction, deterministic no-write behavior |
+| `tests/conversation/test_retry_spool.py` | 4 | AGENTS and CI | Private redacted spool permissions, attempt bound, expiry receipt, and success cleanup |
+| `tests/step3/test_pipeline.py` | 8 | AGENTS and CI | Evidence/context separation plus initial Continuation Summary, Manifest, replay, checkpoint, `no_memory`, output-secret, source-revision behavior |
 | `tests/agentcairn/test_distiller.py` | 3 | AGENTS and CI | Prevalidated Distiller seam and fail-closed unknown/canonical cases |
 
-This 12-test inventory is a current regression baseline, not the complete Phase
+This 25-test inventory is a current regression baseline, not the complete Phase
 1 suite and not end-to-end acceptance.
 
 ## Current and target commands
 
-AGENTS uses the canonical active-suite command for the current three modules:
+AGENTS and CI use the canonical active-suite command for the current four modules:
 
 ```bash
 UV_CACHE_DIR=/tmp/orca-uv-cache \
 uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
+  tests/conversation/test_retry_spool.py \
   tests/step3/test_pipeline.py \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 12 current tests on 2026-08-30. That verifies the
+This exact command passed all 25 current tests on 2026-08-30. That verifies the
 command and current regression baseline only; it does not satisfy the complete
-Phase 1 acceptance scenarios. CI must adopt the same command to resolve the
-remaining C-009 route divergence.
+Phase 1 acceptance scenarios.
 
 New deterministic Phase 1 suites must be added to this command and CI as their
 milestones land. A later quality update may replace explicit paths with
@@ -258,7 +259,6 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 
 ## Adoption gaps
 
-- CI currently omits the Step 3 pipeline suite.
 - Most accepted Phase 1 contracts have no implementation tests yet.
 - No current local-runtime end-to-end or operational canary proves Phase 1.
 

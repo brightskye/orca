@@ -10,7 +10,7 @@ applies_to:
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 ---
 
 # Phase 1 implementation plan
@@ -110,13 +110,13 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Normalize only positively identified permitted visible/final assistant
+- [x] Normalize only positively identified permitted visible/final assistant
   context while preserving Owner evidence and exact source identity.
-- [ ] Exclude reasoning, tools, injected envelopes, private events, subagents,
+- [x] Exclude reasoning, tools, injected envelopes, private events, subagents,
   ambiguous records, and schema drift through deterministic fixtures.
-- [ ] Treat a partial trailing JSONL record as incomplete input that may finish
+- [x] Treat a partial trailing JSONL record as incomplete input that may finish
   later without advancing progress.
-- [ ] Apply accepted privacy controls and credential redaction before any retry
+- [x] Apply accepted privacy controls and credential redaction before any retry
   payload or provider handoff; retain no second raw transcript archive.
 
 ### Exit criteria
@@ -379,6 +379,18 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   exact local Git-worktree reuse, and mapping-intent recovery were promoted.
 - 2026-08-30 — Owner accepted RFC-0003; Orca Status, one quiet session reminder,
   and the common-use/edge-safety readiness gate were promoted.
+- 2026-08-30 — Milestone 1 implemented final-assistant context classification,
+  private and unsupported-event exclusion, partial-tail deferral, strict
+  complete-record failure, bounded source-offset reading, and secure redacted
+  retry-spool primitives. Processor receives Owner evidence separately from
+  assistant context. The
+  active four-module suite passed 25 tests and CI was aligned to the same route.
+
+## Implementation review log
+
+| ID and milestone | Type | Description | Evidence or affected files | Impact | Safe action taken | Status | Recommended Owner decision |
+|---|---|---|---|---|---|---|---|
+| IRL-001 — Milestone 1 | risk | Codex Desktop's internal rollout JSONL remains a non-public and drift-prone source format. | `src/orca_memory/conversation.py`; `tests/conversation/test_codex_capture.py` | Synthetic deterministic coverage proves fail-closed behavior but not the current host's private rollout shape. | Support only positively identified Owner events and Responses-style assistant items marked `phase: final_answer`; exclude unknown shapes and require an isolated canary before routine use. | open | Permit a private local format canary during Milestone 7 without copying rollout content into tracked evidence. |
 
 ## Related documents
 

@@ -36,4 +36,4 @@ def redact_secrets(text: str) -> str:
 def contains_secret(text: str) -> bool:
     """Return whether text still contains an obvious credential-like value."""
 
-    return any(pattern.search(text) is not None for pattern in _PATTERNS)
+    return redact_secrets(text) != text

@@ -58,6 +58,7 @@ Run the active Phase 1 suite after changing implementation or tests:
 UV_CACHE_DIR=/tmp/orca-uv-cache \
 uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
+  tests/conversation/test_retry_spool.py \
   tests/step3/test_pipeline.py \
   tests/agentcairn/test_distiller.py
 ```

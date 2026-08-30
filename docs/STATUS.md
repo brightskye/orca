@@ -50,23 +50,20 @@ was accepted and promoted on 2026-08-30.
 
 | Capability | Status | Evidence or limitation |
 |---|---|---|
-| Owner-turn Codex normalization and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, and focused capture tests |
-| Visible assistant-response normalization | Diverged | Accepted design requires supported visible/final assistant context; current normalizer accepts Owner messages only |
+| Owner and final-assistant Codex normalization, privacy filtering, partial-tail deferral, and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, synthetic deterministic capture tests, and Processor evidence/context separation tests |
 | Continuation Summary semantic proposal and validation | Partial | One replaceable provider call and one controlled output are implemented |
 | Run Manifest, scan-based replay detection, checkpoint-last publication, `no_memory`, and source-revision handling | Diverged | Initial `0.1` slice works; accepted `0.2` source/operation/output joins, segment cursor, and publication intent are not implemented |
 | AgentCairn prevalidated Distiller seam | Partial | Adapter and focused tests exist; it is not wired into the Processor |
 | Typed Memory Records, Project Summary, project registration/relink, and Knowledge Candidates | Planned | Accepted Phase 1 design; no active implementation |
 | Interaction observations, profiles, and compiled guidance | Planned | Accepted contracts exist; no active implementation |
 | Recall, MCP surface, skills, and retrieval projections | Planned | Accepted design; no active implementation |
-| Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Planned | No active runtime wiring |
+| Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Partial | Secure redacted spool creation, three-attempt accounting, 72-hour expiry, content-free receipt, and success cleanup are tested library behavior; no hook or worker wiring exists |
 | Orca Status, Attention Items, and session reminder | Planned | Accepted content-free local interface; no active implementation |
 | Host configuration loading and WSL deployment | Planned | Accepted safe configuration examples exist; loader and deployed runtime do not |
 | Canonical automatic apply | Deliberately absent | Disabled and unexposed by Phase 1 governance |
 
 ## Known divergence
 
-- Partial trailing JSONL currently raises an error instead of waiting for a
-  later run.
 - Replay checkpoint repair does not retain an available Manifest locator.
 - Processor context budgets, chunking, overlap, related-record selection, and
   the full proposal set are designed but not implemented.
@@ -75,9 +72,9 @@ was accepted and promoted on 2026-08-30.
   recovery.
 - Runtime hooks, secure retry handling, retrieval reconciliation, interaction
   consolidation, and routine deployment are designed but not implemented.
-- CI still omits the Step 3 pipeline suite. AGENTS now uses the accepted
-  canonical three-module command, so C-009 remains a CI-route divergence rather
-  than an agent-verification ambiguity.
+- Codex's internal rollout format remains non-public. The connector supports the
+  accepted Responses-style `final_answer` marker and fails closed on drift, but
+  isolated host-format verification remains required before routine use.
 
 These are implementation gaps, not permission to weaken the accepted contracts.
 
@@ -85,9 +82,10 @@ These are implementation gaps, not permission to weaken the accepted contracts.
 
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
-- Phase 1 implementation: the next bounded slice is permitted assistant-context
-  normalization, followed by Typed Memory Record add/support/update behavior and
-  Project Summary refresh through Storage.
+- Phase 1 implementation: Milestone 1 capture and privacy handoff is implemented
+  and deterministically verified. The next bounded slice is Typed Memory Record
+  add/support/update behavior, project registration/relinking, Manifest and
+  checkpoint `0.2`, recoverable publication, and Project Summary refresh.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
@@ -116,7 +114,7 @@ interaction, configuration, deployment, and readiness work listed above.
 
 - Repository and documentation review date: 2026-08-30.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current three-module regression command passed 12 tests on
+- The complete current four-module regression command passed 25 tests on
   2026-08-30; it is not Phase 1 end-to-end acceptance.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).

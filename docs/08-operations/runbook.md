@@ -49,7 +49,7 @@ a hidden or implied procedure.
 ## Scope
 
 This limited runbook covers the `/workspace/projects/orca` checkout and the
-current three-module regression command. It does not authorize use of a personal
+current four-module regression command. It does not authorize use of a personal
 or synchronized vault, code under `legacy/manual-prototype/`, later-phase topology, or any
 canonical-memory mutation.
 
@@ -126,6 +126,7 @@ Command:
 UV_CACHE_DIR=/tmp/orca-uv-cache \
 uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
+  tests/conversation/test_retry_spool.py \
   tests/step3/test_pipeline.py \
   tests/agentcairn/test_distiller.py
 ```
@@ -133,16 +134,15 @@ uv run --extra agentcairn python -m unittest \
 Expected result for the current checkout:
 
 ```text
-Ran 12 tests
+Ran 25 tests
 
 OK
 ```
 
-This command passed 12 tests in 0.077 seconds on 2026-08-30. It covers the
-initial capture, Continuation-Summary/Manifest/checkpoint, and AgentCairn
+This command passed 25 tests on 2026-08-30. It covers the implemented capture,
+retry-spool primitives, Continuation-Summary/Manifest/checkpoint, and AgentCairn
 Distiller seams only. It is not a runtime health check or Phase 1 acceptance.
-The accepted [Test Strategy](../07-quality/test-strategy.md) owns the route gap
-between this command, AGENTS, and CI.
+The accepted [Test Strategy](../07-quality/test-strategy.md) owns suite coverage.
 
 ## Routine operations
 
@@ -195,10 +195,10 @@ boundaries, not executable procedures:
 | Exact replay after checkpoint loss | **Tested library behavior** | Durable Manifest scan prevents a second semantic result; current repair omits an available Manifest locator |
 | Failure before checkpoint publication | **Tested library behavior** | Leave progress unchanged so a later retry can recover |
 | Interrupted `0.2` publication | **Accepted design; unavailable** | A valid fixed publication intent completes without another semantic call; mismatch or orphan state requires human repair |
-| Partial trailing JSONL | **Known divergence** | Do not advance progress or edit the source; current normalizer raises instead of waiting |
+| Partial trailing JSONL | **Tested library behavior** | Complete preceding records proceed while the incomplete tail remains deferred at the last complete byte position |
 | Invalid or credential-bearing generated output | **Tested library behavior for output secrets** | Publish no affected output and leave progress retryable |
 | Missing or stale retrieval index | **Unavailable** | Leave Markdown unchanged; no rebuild command exists |
-| Retry-spool failure or expiry | **Unavailable** | No active spool or operator cleanup command exists |
+| Retry-spool failure or expiry | **Tested library behavior; operator procedure unavailable** | Private redacted creation, three attempts, 72-hour expiry, content-free receipt, and success cleanup are tested; no lifecycle hook invokes them yet |
 | Interrupted project registration or relink | **Accepted design; unavailable** | Preserve the Project Mapping Intent; matching partial state may complete, but mismatch or orphan state requires Owner repair |
 
 Do not manually edit immutable Manifests or advance checkpoints to force
@@ -229,7 +229,7 @@ that property is not yet exposed or verified operationally.
 |---|---|---|
 | No Orca start or health command | Expected implementation gap | Do not invent one; check [Current Status](../STATUS.md) |
 | Example configuration has no runtime effect | Configuration loader is planned | Do not treat examples as deployment |
-| Visible assistant context is absent | Known capture divergence | Keep the source unchanged; implementation belongs in a separate task |
+| A Codex source item has an unknown shape | Expected fail-closed connector behavior | Preserve the source and update only after the supported adapter contract is verified |
 | Partial final JSONL raises an error | Known capture divergence | Do not truncate or repair the agent-owned source manually |
 | Recall, interaction guidance, hooks, or catch-up are unavailable | Planned capability | Do not substitute `legacy/manual-prototype/` behavior |
 | Project setup or relink is unavailable | Accepted implementation gap | Do not hand-edit `project.md` and `config/host.yaml` as a substitute |

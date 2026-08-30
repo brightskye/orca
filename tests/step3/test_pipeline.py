@@ -40,6 +40,21 @@ def _batch(*, text_hash: str = "hash-1") -> ConversationBatch:
     return ConversationBatch("codex-local", "conversation-123", (turn,))
 
 
+def _batch_with_assistant_context() -> ConversationBatch:
+    owner = _batch().turns[0]
+    assistant = NormalizedTurn(
+        connector_id="codex-local",
+        conversation_id="conversation-123",
+        turn_id="turn-1-answer",
+        occurred_at="2026-08-29T10:01:00Z",
+        source_uri="codex://session/conversation-123/event/turn-1-answer",
+        text="A visible final response used only as context.",
+        content_sha256="hash-2",
+        source_role="assistant",
+    )
+    return ConversationBatch("codex-local", "conversation-123", (owner, assistant))
+
+
 def _summary(*, state: str = "The publication flow is accepted.") -> ContinuationSummary:
     return ContinuationSummary(
         purpose="Step 3 memory implementation",
@@ -85,6 +100,7 @@ class Step3PipelineTests(unittest.TestCase):
             self.assertEqual(manifest["schema_version"], "orca-run-manifest/0.1")
             self.assertEqual(manifest["status"], "success")
             self.assertEqual(manifest["sources"][0]["turn_id"], "turn-1")
+            self.assertEqual(manifest["sources"][0]["source_role"], "owner")
             self.assertEqual(manifest["outputs"][0]["sha256"], _sha256(summary_path))
 
             checkpoints = list((root / "runtime" / "checkpoints").glob("**/*.json"))
@@ -114,7 +130,51 @@ class Step3PipelineTests(unittest.TestCase):
             self.assertEqual(first.status, "success")
             self.assertEqual(replay.status, "replay")
             self.assertEqual(provider.calls, 1)
-            self.assertEqual(len(list((root / "runtime" / "checkpoints").glob("**/*.json"))), 1)
+            self.assertEqual(
+                len(list((root / "runtime" / "checkpoints").glob("**/*.json"))),
+                1,
+            )
+
+    def test_provider_receives_owner_evidence_separate_from_assistant_context(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            result = Step3Pipeline(
+                Processor(provider), self._storage(Path(directory))
+            ).run(
+                _batch_with_assistant_context(),
+                scope=MemoryScope("general", "general"),
+            )
+
+            request = provider.requests[0]
+            self.assertEqual(
+                [turn.turn_id for turn in request.owner_evidence], ["turn-1"]
+            )
+            self.assertEqual(
+                [turn.turn_id for turn in request.assistant_context],
+                ["turn-1-answer"],
+            )
+            manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                [source["source_role"] for source in manifest["sources"]],
+                ["owner", "assistant"],
+            )
+
+    def test_assistant_context_alone_cannot_create_memory(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            provider = FakeProvider(ProcessingProposal(_summary()))
+            assistant = _batch_with_assistant_context().turns[1]
+            with self.assertRaisesRegex(ValueError, "Owner evidence"):
+                Step3Pipeline(
+                    Processor(provider), self._storage(Path(directory))
+                ).run(
+                    ConversationBatch(
+                        "codex-local", "conversation-123", (assistant,)
+                    ),
+                    scope=MemoryScope("general", "general"),
+                )
+
+            self.assertEqual(provider.calls, 0)
+            self.assertFalse((Path(directory) / "vault").exists())
 
     def test_manifest_allows_recovery_when_checkpoint_write_fails(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -279,6 +279,7 @@ class Storage:
 def _source_receipt(turn: NormalizedTurn) -> dict[str, str | None]:
     return {
         "turn_id": turn.turn_id,
+        "source_role": turn.source_role,
         "source_uri": turn.source_uri,
         "occurred_at": turn.occurred_at,
         "content_sha256": turn.content_sha256,

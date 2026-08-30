@@ -14,10 +14,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - name: Run focused tests
+      - name: Run active Phase 1 tests
         env:
           UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
         run: >-
           uv run --extra agentcairn python -m unittest
           tests/conversation/test_codex_capture.py
+          tests/conversation/test_retry_spool.py
+          tests/step3/test_pipeline.py
           tests/agentcairn/test_distiller.py
