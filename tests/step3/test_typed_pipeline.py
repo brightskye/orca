@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -33,7 +34,7 @@ def _batch(turn_id: str, *, conversation_id: str = "conversation-typed") -> Conv
         occurred_at="2026-08-30T10:00:00Z",
         source_uri=f"codex://session/{conversation_id}/event/{turn_id}",
         text=f"Owner evidence for {turn_id}.",
-        content_sha256=f"source-{turn_id}",
+        content_sha256=hashlib.sha256(f"Owner evidence for {turn_id}.".encode()).hexdigest(),
     )
     return ConversationBatch("codex-local", conversation_id, (turn,))
 

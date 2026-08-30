@@ -22,10 +22,16 @@ jobs:
           tests/conversation/test_codex_capture.py
           tests/conversation/test_retry_spool.py
           tests/memory/test_records.py
+          tests/memory/test_conflicts.py
+          tests/candidates/test_candidates.py
           tests/project/test_registry.py
           tests/project/test_mapping_publication.py
           tests/step3/test_pipeline.py
           tests/step3/test_typed_pipeline.py
+          tests/step3/test_segmentation.py
+          tests/step3/test_processor_budgets.py
+          tests/step3/test_segmented_pipeline.py
+          tests/step3/test_outcomes.py
           tests/step3/test_provenance.py
           tests/step3/test_publication.py
           tests/agentcairn/test_distiller.py

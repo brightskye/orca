@@ -406,6 +406,7 @@ def _render_body_values(
     implications: str | None,
     final: str | None,
     closure: str | None,
+    lineage: tuple[str, ...] = (),
 ) -> str:
     lines = [f"# {subject}", ""]
     if status == "current":
@@ -414,13 +415,16 @@ def _render_body_values(
         for heading, value in (("Context", context), ("Implications", implications)):
             if value is not None and value.strip():
                 lines.extend(("", f"## {heading}", "", value.strip()))
+        if lineage:
+            lines.extend(("", "## Resolution lineage", ""))
+            lines.extend(f"- {entry}" for entry in lineage)
     else:
         assert final is not None and closure is not None
         lines.extend(("## Final", "", final.strip(), "", "## Closure", "", closure.strip()))
     return "\n".join(lines)
 
 
-def _parse_body(body: str, subject: str, status: str) -> dict[str, str | None]:
+def _parse_body(body: str, subject: str, status: str) -> dict[str, Any]:
     if not isinstance(body, str) or not body.strip():
         _fail("record body is required")
     if body.startswith("---"):
@@ -445,7 +449,7 @@ def _parse_body(body: str, subject: str, status: str) -> dict[str, str | None]:
             sections[current_heading].append(line)
         elif line.strip():
             _fail("record body text must be inside a section")
-    allowed = {"Current", "Context", "Implications"} if status == "current" else {
+    allowed = {"Current", "Context", "Implications", "Resolution lineage"} if status == "current" else {
         "Final",
         "Closure",
     }
@@ -456,13 +460,14 @@ def _parse_body(body: str, subject: str, status: str) -> dict[str, str | None]:
         ["Current"]
         + (["Context"] if "Context" in sections else [])
         + (["Implications"] if "Implications" in sections else [])
+        + (["Resolution lineage"] if "Resolution lineage" in sections else [])
         if status == "current"
         else ["Final", "Closure"]
     )
     if section_order != expected_order:
         _fail("record body sections are not in canonical order")
     values: dict[str, str | None] = {}
-    for heading in allowed:
+    for heading in allowed - {"Resolution lineage"}:
         if heading not in sections:
             values[heading.lower()] = None
             continue
@@ -470,12 +475,24 @@ def _parse_body(body: str, subject: str, status: str) -> dict[str, str | None]:
         if not value:
             _fail(f"record body section {heading!r} must be non-empty")
         values[heading.lower()] = value
+    lineage: tuple[str, ...] = ()
+    if "Resolution lineage" in sections:
+        entries: list[str] = []
+        for line in sections["Resolution lineage"]:
+            if line.strip():
+                if not line.startswith("- ") or not line[2:].strip():
+                    _fail("resolution lineage must use non-empty bullet items")
+                entries.append(_required_text(line[2:].strip(), "resolution lineage"))
+        if not entries:
+            _fail("resolution lineage must contain at least one entry")
+        lineage = tuple(entries)
     return {
         "current": values.get("current"),
         "context": values.get("context"),
         "implications": values.get("implications"),
         "final": values.get("final"),
         "closure": values.get("closure"),
+        "lineage": lineage,
     }
 
 
@@ -505,6 +522,7 @@ class MemoryRecord:
     implications: str | None = None
     final: str | None = None
     closure: str | None = None
+    lineage: tuple[str, ...] = ()
     body: str | None = field(default=None, compare=True)
 
     def __post_init__(self) -> None:
@@ -541,8 +559,15 @@ class MemoryRecord:
             "final": self.final,
             "closure": self.closure,
         }
+        lineage = tuple(_required_text(item, "resolution lineage") for item in self.lineage)
+        if self.status != "current" and lineage:
+            _fail("only current records may retain resolution lineage")
         if self.body is not None:
             parsed = _parse_body(self.body, subject, self.status)
+            parsed_lineage = parsed.pop("lineage")
+            if lineage and lineage != parsed_lineage:
+                _fail("body and resolution lineage field disagree")
+            lineage = parsed_lineage
             for name, value in parsed.items():
                 supplied = sections[name]
                 if supplied is not None and supplied.strip() != (value or "").strip():
@@ -559,6 +584,7 @@ class MemoryRecord:
             implications,
             final,
             closure,
+            lineage,
         )
         object.__setattr__(self, "memory_id", memory_id)
         object.__setattr__(self, "subject", subject)
@@ -568,6 +594,7 @@ class MemoryRecord:
         object.__setattr__(self, "created_at", created_at)
         object.__setattr__(self, "updated_at", updated_at)
         object.__setattr__(self, "workstreams", workstreams)
+        object.__setattr__(self, "lineage", lineage)
         for name, value in (
             ("current", current),
             ("context", context),
@@ -734,6 +761,7 @@ _RECORD_FIELDS = (
     "implications",
     "final",
     "closure",
+    "lineage",
     "body",
 )
 
@@ -887,6 +915,7 @@ def apply_update(
         implications=proposal.implications,
         final=proposal.final,
         closure=proposal.closure,
+        lineage=existing.lineage,
     )
 
 

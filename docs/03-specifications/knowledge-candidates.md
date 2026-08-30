@@ -4,13 +4,13 @@ title: Orca Knowledge Candidate Specification
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: planned
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 supersedes: []
 candidate-schema: orca-knowledge-candidate/0.1
 ---

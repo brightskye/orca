@@ -128,10 +128,16 @@ uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
   tests/conversation/test_retry_spool.py \
   tests/memory/test_records.py \
+  tests/memory/test_conflicts.py \
+  tests/candidates/test_candidates.py \
   tests/project/test_registry.py \
   tests/project/test_mapping_publication.py \
   tests/step3/test_pipeline.py \
   tests/step3/test_typed_pipeline.py \
+  tests/step3/test_segmentation.py \
+  tests/step3/test_processor_budgets.py \
+  tests/step3/test_segmented_pipeline.py \
+  tests/step3/test_outcomes.py \
   tests/step3/test_provenance.py \
   tests/step3/test_publication.py \
   tests/agentcairn/test_distiller.py
@@ -140,15 +146,16 @@ uv run --extra agentcairn python -m unittest \
 Expected result for the current checkout:
 
 ```text
-Ran 65 tests
+Ran 103 tests
 
 OK
 ```
 
-This command passed 65 tests on 2026-08-30. It covers the implemented capture,
+This command passed 103 tests on 2026-08-30. It covers the implemented capture,
 retry-spool primitives, Typed Memory and Project Summary contracts, project
-mapping, unsegmented Manifest/checkpoint `0.2`, recoverable publication, and
-AgentCairn Distiller seams. It is not a runtime health check or Phase 1 acceptance.
+mapping, bounded segmented processing, conflicts, candidates,
+Manifest/checkpoint `0.2`, recoverable publication, and AgentCairn Distiller
+seams. It is not a runtime health check or Phase 1 acceptance.
 The accepted [Test Strategy](../07-quality/test-strategy.md) owns suite coverage.
 
 ## Routine operations
@@ -167,8 +174,7 @@ Its design description must not be executed as if it were a current command.
 diagnostics interface.
 
 The library slice publishes immutable `0.2` Run Manifests and local `0.2`
-checkpoints with source/operation/output joins and intent-first recovery for
-unsegmented sources. Multi-segment cursor behavior remains Milestone 3 work.
+checkpoints with source-segment/operation/output joins and intent-first recovery.
 Its meaning and paths are defined by the [Provenance
 Ledger](../03-specifications/provenance-ledger.md), but no public inspection tool
 exists. Do not inspect or publish local

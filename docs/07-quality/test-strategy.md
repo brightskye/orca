@@ -133,14 +133,20 @@ Scenario definitions and verdicts remain in the
 | `tests/conversation/test_retry_spool.py` | 4 | AGENTS and CI | Private redacted spool permissions, attempt bound, expiry receipt, and success cleanup |
 | `tests/step3/test_pipeline.py` | 8 | AGENTS and CI | Evidence/context separation plus initial Continuation Summary, Manifest, replay, checkpoint, `no_memory`, output-secret, source-revision behavior |
 | `tests/memory/test_records.py` | 14 | AGENTS and CI | Typed Memory schemas, kinds, scope, identity, bodies, filenames, add/support/update, and Project Summary validation |
+| `tests/memory/test_conflicts.py` | 6 | AGENTS and CI | Stable variants, conflict review states, overflow, support, supersession lineage, and Owner-only resolution |
+| `tests/candidates/test_candidates.py` | 9 | AGENTS and CI | Ordinary candidate schema, kinds, scopes, placement, support, terminal dispositions, receipts, and recall exclusion |
 | `tests/project/test_registry.py` | 9 | AGENTS and CI | Stable project identity, exact mapping, Owner choice, Unassigned, registration, relink, and exact-worktree reuse |
 | `tests/project/test_mapping_publication.py` | 4 | AGENTS and CI | Intent-first project registration/relink recovery, mismatch handling, and content-free orphan detection |
 | `tests/step3/test_typed_pipeline.py` | 5 | AGENTS and CI | Typed add/support/update, stable identity, Project Summary refresh, joined receipts, and interrupted recovery |
-| `tests/step3/test_provenance.py` | 3 | AGENTS and CI | Manifest/checkpoint `0.2`, mixed `0.1` reads, exact replay, and conflict detection |
+| `tests/step3/test_segmentation.py` | 11 | AGENTS and CI | Accepted budgets, conservative estimation, UTF-8 segments, chronological chunks, context measurement, and related-record bounds |
+| `tests/step3/test_processor_budgets.py` | 5 | AGENTS and CI | Pre-call context rejection, optional overlap removal, bounded records, output ceiling, and project-context scope |
+| `tests/step3/test_segmented_pipeline.py` | 2 | AGENTS and CI | Sequential segment Manifests, exact replay/checkpoint repair, and segmentation-policy conflict |
+| `tests/step3/test_outcomes.py` | 3 | AGENTS and CI | Conflict/overflow, active and overflow support, candidates, abstention, supersession, and exact joined publication |
+| `tests/step3/test_provenance.py` | 5 | AGENTS and CI | Manifest/checkpoint `0.2`, mixed `0.1` reads, segment sequence, strict joins, exact replay, and conflict detection |
 | `tests/step3/test_publication.py` | 5 | AGENTS and CI | Intent/artifact/Manifest/checkpoint order, fault recovery, mismatch, and path containment |
 | `tests/agentcairn/test_distiller.py` | 3 | AGENTS and CI | Prevalidated Distiller seam and fail-closed unknown/canonical cases |
 
-This 65-test inventory is a current regression baseline, not the complete Phase
+This 103-test inventory is a current regression baseline, not the complete Phase
 1 suite and not end-to-end acceptance.
 
 ## Current and target commands
@@ -153,16 +159,22 @@ uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
   tests/conversation/test_retry_spool.py \
   tests/memory/test_records.py \
+  tests/memory/test_conflicts.py \
+  tests/candidates/test_candidates.py \
   tests/project/test_registry.py \
   tests/project/test_mapping_publication.py \
   tests/step3/test_pipeline.py \
   tests/step3/test_typed_pipeline.py \
+  tests/step3/test_segmentation.py \
+  tests/step3/test_processor_budgets.py \
+  tests/step3/test_segmented_pipeline.py \
+  tests/step3/test_outcomes.py \
   tests/step3/test_provenance.py \
   tests/step3/test_publication.py \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 65 current tests on 2026-08-30. That verifies the
+This exact command passed all 103 current tests on 2026-08-30. That verifies the
 command and current regression baseline only; it does not satisfy the complete
 Phase 1 acceptance scenarios.
 

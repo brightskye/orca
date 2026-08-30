@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -26,7 +27,7 @@ class FakeProvider:
         return self.proposal
 
 
-def _batch(*, text_hash: str = "hash-1") -> ConversationBatch:
+def _batch(*, text_hash: str | None = None) -> ConversationBatch:
     turn = NormalizedTurn(
         connector_id="codex-local",
         conversation_id="conversation-123",
@@ -34,7 +35,7 @@ def _batch(*, text_hash: str = "hash-1") -> ConversationBatch:
         occurred_at="2026-08-29T10:00:00Z",
         source_uri="codex://session/conversation-123/event/turn-1",
         text="Design the Step 3 pipeline.",
-        content_sha256=text_hash,
+        content_sha256=text_hash or hashlib.sha256(b"Design the Step 3 pipeline.").hexdigest(),
     )
     return ConversationBatch("codex-local", "conversation-123", (turn,))
 
@@ -48,7 +49,7 @@ def _batch_with_assistant_context() -> ConversationBatch:
         occurred_at="2026-08-29T10:01:00Z",
         source_uri="codex://session/conversation-123/event/turn-1-answer",
         text="A visible final response used only as context.",
-        content_sha256="hash-2",
+        content_sha256=hashlib.sha256(b"A visible final response used only as context.").hexdigest(),
         source_role="assistant",
     )
     return ConversationBatch("codex-local", "conversation-123", (owner, assistant))
@@ -245,7 +246,7 @@ class Step3PipelineTests(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "source or segmentation conflict"):
                 pipeline.run(
-                    _batch(text_hash="changed-hash"),
+                    _batch(text_hash="f" * 64),
                     scope=MemoryScope("general", "general"),
                 )
             self.assertEqual(provider.calls, 1)

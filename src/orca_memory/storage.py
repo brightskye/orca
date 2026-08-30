@@ -15,6 +15,19 @@ import unicodedata
 import uuid
 
 from orca_memory.conversation import ConversationBatch, NormalizedTurn
+from orca_memory.candidates import (
+    KnowledgeCandidate,
+    candidate_placement,
+    materialize_candidate,
+    support_candidate,
+)
+from orca_memory.conflicts import (
+    ConflictRecord,
+    apply_conflict,
+    parse_conflict_record,
+    start_conflict,
+    supersede,
+)
 from orca_memory.memory import (
     MemoryRecord,
     ProjectSummary,
@@ -33,10 +46,16 @@ from orca_memory.provenance import (
     MANIFEST_SCHEMA,
     checkpoint_payload,
     is_exact_replay,
+    is_exact_segment_replay,
     processed_sources,
+    processed_segment_receipts,
+    segment_key,
+    segmented_source,
     unsegmented_source,
+    validate_manifest,
 )
 from orca_memory.publication import PlannedOutput, PublicationPlan, RecoverablePublisher
+from orca_memory.segmentation import SourceSegment, segment_turn_with_budget
 
 
 CONTINUATION_SCHEMA = "orca-conversation-continuation/1"
@@ -121,6 +140,56 @@ class Storage:
             conversation.has_partial_tail,
         )
 
+    def select_unprocessed_segments(
+        self, segments: tuple[SourceSegment, ...]
+    ) -> tuple[SourceSegment, ...]:
+        """Return unprocessed segments and fail closed on representation drift."""
+
+        processed, legacy = processed_segment_receipts(self.vault_root)
+        selected: list[SourceSegment] = []
+        for segment in segments:
+            source = segmented_source(segment, source_ref="src-check")
+            key = segment_key(segment.connector_id, segment.conversation_id, source)
+            known = processed.get(key)
+            turn_key = key[:3]
+            legacy_receipt = legacy.get(turn_key)
+            same_turn = [
+                receipt
+                for receipt_key, receipt in processed.items()
+                if receipt_key[:3] == turn_key
+            ]
+            if known is not None:
+                if is_exact_segment_replay(segment, known):
+                    continue
+                raise ValueError(
+                    f"source or segmentation conflict for known segment {segment.turn_id}/{segment.index}"
+                )
+            if legacy_receipt is not None:
+                if (
+                    segment.count == 1
+                    and legacy_receipt.representation[:2]
+                    == (segment.turn_content_sha256, segment.redaction_policy)
+                ):
+                    continue
+                raise ValueError(
+                    f"governed reprocessing required for legacy turn {segment.turn_id}"
+                )
+            if same_turn:
+                first = same_turn[0].source
+                first_segment = first["segment"]
+                if (
+                    first["turn_content_sha256"] != segment.turn_content_sha256
+                    or first["redaction_policy"] != segment.redaction_policy
+                    or first_segment["policy_version"] != segment.policy_version
+                    or first_segment["parameters_sha256"] != segment.parameters_sha256
+                    or first_segment["count"] != segment.count
+                ):
+                    raise ValueError(
+                        f"source or segmentation conflict for turn {segment.turn_id}"
+                    )
+            selected.append(segment)
+        return tuple(selected)
+
     def recover_pending_publications(self) -> tuple[Path, ...]:
         """Complete every valid fixed publication intent without a provider call."""
 
@@ -153,6 +222,22 @@ class Storage:
             raise ValueError(f"multiple continuations for conversation {conversation_id}")
         return exact[0].read_text(encoding="utf-8") if exact else None
 
+    def load_project_summary(self, scope: MemoryScope) -> str | None:
+        """Load the bounded current Project Summary only for project scope."""
+
+        if scope.kind != "project":
+            return None
+        path = (
+            self.vault_root
+            / "System"
+            / "Orca Memory"
+            / "shallow"
+            / "projects"
+            / _slug(scope.project_alias or "")
+            / "summary.md"
+        )
+        return path.read_text(encoding="utf-8") if path.is_file() else None
+
     def publish(
         self,
         processed: ProcessedConversation,
@@ -165,8 +250,8 @@ class Storage:
         timestamp = now.isoformat().replace("+00:00", "Z")
         run_id = f"run_{self._id_factory()}"
         sources = [
-            unsegmented_source(turn, source_ref=f"src-{index:03d}")
-            for index, turn in enumerate(processed.conversation.turns, start=1)
+            segmented_source(segment, source_ref=f"src-{index:03d}")
+            for index, segment in enumerate(processed.source_segments, start=1)
         ]
         owner_source_refs = [
             source["source_ref"]
@@ -321,6 +406,175 @@ class Storage:
                 }
             )
 
+        for replacement in processed.supersede_proposals:
+            target = existing_records.get(replacement.target_memory_id)
+            if not isinstance(target, MemoryRecord):
+                raise ValueError("supersede requires one current Typed Memory Record")
+            post_image = supersede(target, replacement, updated_at=timestamp)
+            relative = record_relative_path(
+                post_image,
+                scope.project_alias if scope.kind == "project" else None,
+                existing_ids=tuple(existing_records),
+            )
+            path = self.vault_root / relative
+            output_ref = plan_output(
+                artifact_kind="typed-memory-record",
+                artifact_id=post_image.memory_id,
+                path=path,
+                payload=render_record(post_image).encode("utf-8"),
+                before_sha256=_hash_path(path),
+            )
+            changed_record_ids.append(post_image.memory_id)
+            existing_records[post_image.memory_id] = post_image
+            operations.append(
+                {
+                    "operation_id": f"op-{len(operations) + 1:03d}",
+                    "operation": "supersede",
+                    "outcome": "updated",
+                    "artifact_kind": "typed-memory-record",
+                    "artifact_id": post_image.memory_id,
+                    "source_refs": owner_source_refs,
+                    "output_refs": [output_ref] if output_ref else [],
+                    "embedded_artifact": None,
+                }
+            )
+
+        for conflict in processed.conflict_proposals:
+            target = existing_records.get(conflict.target_memory_id)
+            if (
+                isinstance(target, ConflictRecord)
+                and conflict.target_variant_id is not None
+                and conflict.target_variant_id
+                not in {variant.variant_id for variant in target.variants}
+            ):
+                overflow_id = self._validate_overflow_support(conflict)
+                operations.append(
+                    {
+                        "operation_id": f"op-{len(operations) + 1:03d}",
+                        "operation": "support",
+                        "outcome": "supported",
+                        "artifact_kind": "conflict-overflow-candidate",
+                        "artifact_id": overflow_id,
+                        "source_refs": owner_source_refs,
+                        "output_refs": [],
+                        "embedded_artifact": None,
+                    }
+                )
+                continue
+            if isinstance(target, MemoryRecord):
+                post_image = start_conflict(target, conflict, updated_at=timestamp)
+                overflow = None
+                outcome = "conflict-recorded"
+            elif isinstance(target, ConflictRecord):
+                post_image, overflow, outcome = apply_conflict(
+                    target,
+                    conflict,
+                    updated_at=timestamp,
+                    next_variant_number=self._next_overflow_variant(target.memory_id),
+                )
+            else:
+                raise ValueError("conflict requires an existing target record")
+            output_refs: list[str] = []
+            if post_image is not target:
+                relative = record_relative_path(
+                    post_image,  # type: ignore[arg-type]
+                    scope.project_alias if scope.kind == "project" else None,
+                    existing_ids=tuple(existing_records),
+                )
+                path = self.vault_root / relative
+                output_ref = plan_output(
+                    artifact_kind="typed-memory-record",
+                    artifact_id=post_image.memory_id,
+                    path=path,
+                    payload=post_image.render().encode("utf-8"),
+                    before_sha256=_hash_path(path),
+                )
+                if output_ref:
+                    output_refs.append(output_ref)
+                changed_record_ids.append(post_image.memory_id)
+                existing_records[post_image.memory_id] = post_image
+            operations.append(
+                {
+                    "operation_id": f"op-{len(operations) + 1:03d}",
+                    "operation": "conflict" if outcome != "supported" else "support",
+                    "outcome": outcome,
+                    "artifact_kind": "typed-memory-record",
+                    "artifact_id": post_image.memory_id,
+                    "source_refs": owner_source_refs,
+                    "output_refs": output_refs,
+                    "embedded_artifact": None,
+                }
+            )
+            if overflow is not None:
+                overflow_path = self.vault_root / overflow.relative_path(
+                    scope.project_alias if scope.kind == "project" else None
+                )
+                overflow_id = f"{overflow.memory_id}:{overflow.variant_id}"
+                overflow_ref = plan_output(
+                    artifact_kind="conflict-overflow-candidate",
+                    artifact_id=overflow_id,
+                    path=overflow_path,
+                    payload=overflow.render().encode("utf-8"),
+                    before_sha256=_hash_path(overflow_path),
+                )
+                operations.append(
+                    {
+                        "operation_id": f"op-{len(operations) + 1:03d}",
+                        "operation": "conflict",
+                        "outcome": "conflict-recorded",
+                        "artifact_kind": "conflict-overflow-candidate",
+                        "artifact_id": overflow_id,
+                        "source_refs": owner_source_refs,
+                        "output_refs": [overflow_ref] if overflow_ref else [],
+                        "embedded_artifact": None,
+                    }
+                )
+
+        existing_candidates = self._knowledge_candidates()
+        for instruction in processed.candidate_operations:
+            if instruction.operation == "create":
+                candidate_id = self._allocate_candidate_id(existing_candidates)
+                candidate = materialize_candidate(
+                    instruction.proposal,
+                    candidate_id=candidate_id,
+                    created_at=timestamp,
+                )
+                placement = candidate_placement(
+                    self.vault_root,
+                    candidate,
+                    project_alias=scope.project_alias if scope.kind == "project" else None,
+                )
+                output_ref = plan_output(
+                    artifact_kind="knowledge-candidate",
+                    artifact_id=candidate_id,
+                    path=placement.path,
+                    payload=candidate.render().encode("utf-8"),
+                    before_sha256=_hash_path(placement.path),
+                )
+                existing_candidates[candidate_id] = candidate
+                outcome = "created"
+                output_refs = [output_ref] if output_ref else []
+            else:
+                candidate_id = instruction.target_candidate_id or ""
+                candidate = existing_candidates.get(candidate_id)
+                if candidate is None:
+                    raise ValueError("candidate support target does not exist")
+                support_candidate(candidate, instruction.proposal, candidate_id=candidate_id)
+                outcome = "no-change"
+                output_refs = []
+            operations.append(
+                {
+                    "operation_id": f"op-{len(operations) + 1:03d}",
+                    "operation": "candidate",
+                    "outcome": outcome,
+                    "artifact_kind": "knowledge-candidate",
+                    "artifact_id": candidate_id,
+                    "source_refs": owner_source_refs,
+                    "output_refs": output_refs,
+                    "embedded_artifact": None,
+                }
+            )
+
         project_summary_output: tuple[Path, bytes] | None = None
         if changed_record_ids:
             if scope.kind == "project":
@@ -440,6 +694,7 @@ class Storage:
             "operations": operations,
             "outputs": outputs,
         }
+        validate_manifest(manifest)
         manifest_payload = (
             json.dumps(manifest, indent=2, sort_keys=True, ensure_ascii=False) + "\n"
         ).encode("utf-8")
@@ -453,7 +708,8 @@ class Storage:
             / f"{now:%d}"
             / f"{run_id}.json"
         )
-        last_turn = processed.conversation.turns[-1]
+        last_segment = processed.source_segments[-1]
+        last_turn = last_segment.turn
         manifest_relative = manifest_path.relative_to(self.vault_root).as_posix()
         checkpoint_relative = self._checkpoint_relative_path(last_turn)
         checkpoint = checkpoint_payload(
@@ -480,24 +736,68 @@ class Storage:
             processed_through_turn=last_turn.turn_id,
         )
 
-    def _memory_records(self) -> dict[str, MemoryRecord]:
+    def record_segment_replay(
+        self, segments: tuple[SourceSegment, ...]
+    ) -> PublicationResult:
+        """Repair the checkpoint to the last exact proven segment."""
+
+        if not segments:
+            raise ValueError("segment replay requires at least one segment")
+        receipts, legacy = processed_segment_receipts(self.vault_root)
+        last = segments[-1]
+        source = segmented_source(last, source_ref="src-check")
+        receipt = receipts.get(
+            segment_key(last.connector_id, last.conversation_id, source)
+        )
+        if receipt is None:
+            legacy_receipt = legacy.get(
+                (last.connector_id, last.conversation_id, last.turn_id)
+            )
+            if legacy_receipt is None or last.count != 1:
+                raise ValueError("replay has no proving Manifest")
+            return self.record_replay(
+                ConversationBatch(
+                    last.connector_id, last.conversation_id, (last.turn,)
+                )
+            )
+        if not is_exact_segment_replay(last, receipt):
+            raise ValueError("replay segment representation does not match Manifest")
+        manifest_relative = receipt.manifest_path.relative_to(self.vault_root).as_posix()
+        _replace_file(
+            self.runtime_root / self._checkpoint_relative_path(last.turn),
+            checkpoint_payload(
+                connector_id=last.connector_id,
+                conversation_id=last.conversation_id,
+                source=receipt.source,
+                manifest_path=manifest_relative,
+            ),
+        )
+        return PublicationResult("replay", receipt.manifest_path, (), last.turn_id)
+
+    def _memory_records(self) -> dict[str, MemoryRecord | ConflictRecord]:
         """Load Typed Memory Records while rejecting duplicate identities."""
 
         root = self.vault_root / "System" / "Orca Memory" / "shallow"
-        records: dict[str, MemoryRecord] = {}
+        records: dict[str, MemoryRecord | ConflictRecord] = {}
         if not root.exists():
             return records
         for path in sorted(root.glob("**/*.md")):
             document = path.read_text(encoding="utf-8")
             if not document.startswith("---\nschema: orca-memory/0.2\n"):
                 continue
-            record = parse_record(document)
+            record = (
+                parse_conflict_record(document)
+                if "\nstatus: conflict\n" in document
+                else parse_record(document)
+            )
             if record.memory_id in records:
                 raise ValueError(f"duplicate Typed Memory identity: {record.memory_id}")
             records[record.memory_id] = record
         return records
 
-    def _allocate_memory_id(self, existing: dict[str, MemoryRecord]) -> str:
+    def _allocate_memory_id(
+        self, existing: dict[str, MemoryRecord | ConflictRecord]
+    ) -> str:
         """Allocate a Storage-owned opaque ID, bounded with fixed test IDs."""
 
         for attempt in range(100):
@@ -507,12 +807,72 @@ class Storage:
                 return memory_id
         raise ValueError("unable to allocate a unique Typed Memory identity")
 
+    def _knowledge_candidates(self) -> dict[str, KnowledgeCandidate]:
+        root = self.vault_root / "System" / "Orca Memory" / "candidates" / "knowledge"
+        candidates: dict[str, KnowledgeCandidate] = {}
+        if not root.exists():
+            return candidates
+        for path in sorted(root.glob("**/*.md")):
+            candidate = KnowledgeCandidate.parse(path.read_text(encoding="utf-8"))
+            if candidate.candidate_id in candidates:
+                raise ValueError(f"duplicate Knowledge Candidate identity: {candidate.candidate_id}")
+            candidates[candidate.candidate_id] = candidate
+        return candidates
+
+    def _next_overflow_variant(self, memory_id: str) -> int | None:
+        root = self.vault_root / "System" / "Orca Memory" / "candidates" / "conflicts"
+        highest = 3
+        if root.exists():
+            marker = f"memory_id: {memory_id}\n"
+            for path in root.glob("**/*.md"):
+                document = path.read_text(encoding="utf-8")
+                if marker not in document:
+                    continue
+                match = re.search(r"^variant_id: v([1-9][0-9]*)$", document, re.MULTILINE)
+                if match is None:
+                    raise ValueError(f"invalid conflict overflow identity: {path}")
+                highest = max(highest, int(match.group(1)))
+        return highest + 1 if highest >= 4 else None
+
+    def _validate_overflow_support(self, proposal) -> str:
+        root = self.vault_root / "System" / "Orca Memory" / "candidates" / "conflicts"
+        marker_id = f"memory_id: {proposal.target_memory_id}\n"
+        marker_variant = f"variant_id: {proposal.target_variant_id}\n"
+        matches = []
+        if root.exists():
+            for path in root.glob("**/*.md"):
+                document = path.read_text(encoding="utf-8")
+                if marker_id in document and marker_variant in document:
+                    matches.append(document)
+        if len(matches) != 1:
+            raise ValueError("conflict overflow support target does not exist uniquely")
+        document = matches[0]
+        position = document.split("\n## Position\n\n", 1)[-1].strip()
+        position_at_match = re.search(r"^position_at: (.+)$", document, re.MULTILINE)
+        recorded_at = None if position_at_match is None else position_at_match.group(1)
+        expected_at = proposal.position_at or "null"
+        if position != proposal.position or recorded_at != expected_at:
+            raise ValueError("conflict overflow support must exactly preserve meaning")
+        return f"{proposal.target_memory_id}:{proposal.target_variant_id}"
+
+    def _allocate_candidate_id(
+        self, existing: dict[str, KnowledgeCandidate]
+    ) -> str:
+        for attempt in range(100):
+            token = self._id_factory()
+            candidate_id = (
+                f"cand_{token}" if attempt == 0 else f"cand_{token}_{attempt + 1}"
+            )
+            if candidate_id not in existing:
+                return candidate_id
+        raise ValueError("unable to allocate a unique Knowledge Candidate identity")
+
     def _prepare_project_summary(
         self,
         summary: ProjectSummary,
         *,
         scope: MemoryScope,
-        records: dict[str, MemoryRecord],
+        records: dict[str, MemoryRecord | ConflictRecord],
         required_memory_ids: tuple[str, ...],
     ) -> tuple[Path, bytes]:
         """Validate and render the bounded project executive view."""

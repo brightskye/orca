@@ -4,7 +4,7 @@ title: Orca Provenance Ledger Specification
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:

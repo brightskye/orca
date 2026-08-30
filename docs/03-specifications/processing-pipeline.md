@@ -4,13 +4,13 @@ title: Orca Processing Pipeline Specification
 document_type: specification
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
 owners:
   - project-owner
 last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-29
+last_verified_against_code: 2026-08-30
 supersedes: []
 processor-policy: orca-processor/0.1
 ---
@@ -221,13 +221,11 @@ The interface preserves the accepted Phase 1 rules from the
 [Architecture Overview](../02-architecture/overview.md), and
 [Runtime Architecture](../02-architecture/runtime.md).
 
-Current code supports one replaceable provider call for a Conversation
-Continuation Summary, validates its required text and secret exclusion, and
-publishes the earlier `orca-run-manifest/0.1` and `orca-checkpoint/0.1` formats.
-It does not yet implement source segmentation, publication intents, full context
-budgets, related-record selection, the complete proposal set, interaction
-processing, or the candidate and record lifecycles. See [Current
-Status](../STATUS.md).
+Current code enforces the Phase 1 budgets, chronological chunking, deterministic
+UTF-8 segmentation, bounded same-scope related-record selection, controlled
+memory/conflict/candidate/abstention proposals, generated-output limits, and
+recoverable Manifest/checkpoint `0.2` publication. Interaction Observation
+admission lands in Milestone 4. See [Current Status](../STATUS.md).
 
 ## Acceptance criteria
 

@@ -2,12 +2,23 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+import json
 from typing import Protocol
 
 from orca_memory.conversation import ConversationBatch, NormalizedTurn
+from orca_memory.candidates import CandidateProposal
+from orca_memory.conflicts import ConflictProposal, SupersedeProposal
 from orca_memory.memory import ProjectSummary, RecordProposal
 from orca_memory.privacy import contains_secret
+from orca_memory.segmentation import (
+    DEFAULT_BUDGETS,
+    BudgetConfig,
+    SourceSegment,
+    measure_context,
+    segment_turn_with_budget,
+    select_related_records,
+)
 
 
 PROCESSOR_POLICY = "orca-processor/0.1"
@@ -29,10 +40,13 @@ class ContinuationSummary:
 class ProcessingInput:
     """Bounded input visible to one semantic-provider call."""
 
-    owner_evidence: tuple[NormalizedTurn, ...]
-    assistant_context: tuple[NormalizedTurn, ...]
+    owner_evidence: tuple[SourceSegment, ...]
+    assistant_context: tuple[SourceSegment, ...]
     previous_continuation: str | None
     project_id: str | None
+    preceding_turn: str | None = None
+    project_summary: str | None = None
+    related_records: tuple[object, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -42,6 +56,49 @@ class ProcessingProposal:
     continuation: ContinuationSummary | None
     record_proposals: tuple[RecordProposal, ...] = ()
     project_summary: ProjectSummary | None = None
+    candidate_operations: tuple["CandidateInstruction", ...] = ()
+    conflict_proposals: tuple[ConflictProposal, ...] = ()
+    supersede_proposals: tuple[SupersedeProposal, ...] = ()
+    abstentions: tuple["Abstention", ...] = ()
+
+
+@dataclass(frozen=True)
+class CandidateInstruction:
+    """Create or exactly support one ordinary Knowledge Candidate."""
+
+    operation: str
+    proposal: CandidateProposal
+    target_candidate_id: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.operation not in {"create", "support"}:
+            raise ValueError("candidate operation must be create or support")
+        if not isinstance(self.proposal, CandidateProposal):
+            raise ValueError("candidate instruction requires CandidateProposal")
+        if self.operation == "support" and not self.target_candidate_id:
+            raise ValueError("candidate support requires target_candidate_id")
+        if self.operation == "create" and self.target_candidate_id is not None:
+            raise ValueError("candidate creation cannot target an identity")
+
+
+@dataclass(frozen=True)
+class Abstention:
+    """One controlled semantic decline; it creates no operation receipt."""
+
+    reason: str
+
+    def __post_init__(self) -> None:
+        if self.reason not in {
+            "ambiguous",
+            "hypothetical",
+            "quoted",
+            "private",
+            "sensitive",
+            "third-party",
+            "task-or-reminder",
+            "unsupported",
+        }:
+            raise ValueError("unsupported abstention reason")
 
 
 class SemanticProvider(Protocol):
@@ -58,9 +115,14 @@ class ProcessedConversation:
     """Validated Processor output ready for Storage."""
 
     conversation: ConversationBatch
+    source_segments: tuple[SourceSegment, ...]
     continuation: ContinuationSummary | None
     record_proposals: tuple[RecordProposal, ...]
     project_summary: ProjectSummary | None
+    candidate_operations: tuple[CandidateInstruction, ...]
+    conflict_proposals: tuple[ConflictProposal, ...]
+    supersede_proposals: tuple[SupersedeProposal, ...]
+    abstentions: tuple[Abstention, ...]
     provider: str
     policy: str = PROCESSOR_POLICY
 
@@ -81,27 +143,64 @@ class Processor:
         project_id: str | None,
         scope_kind: str,
         scope_id: str,
+        source_segments: tuple[SourceSegment, ...] | None = None,
+        preceding_turn: str | None = None,
+        project_summary: str | None = None,
+        related_records: tuple[object, ...] = (),
+        budgets: BudgetConfig = DEFAULT_BUDGETS,
     ) -> ProcessedConversation:
+        if source_segments is None:
+            source_segments = tuple(
+                segment
+                for turn in conversation.turns
+                for segment in segment_turn_with_budget(turn, budgets)
+            )
+        valid_turn_ids = {turn.turn_id for turn in conversation.turns}
+        if not source_segments or any(
+            segment.turn_id not in valid_turn_ids for segment in source_segments
+        ):
+            raise ValueError("Processor source segments do not match the conversation")
         owner_evidence = tuple(
-            turn for turn in conversation.turns if turn.source_role == "owner"
+            segment for segment in source_segments if segment.source_role == "owner"
         )
         assistant_context = tuple(
-            turn for turn in conversation.turns if turn.source_role == "assistant"
+            segment for segment in source_segments if segment.source_role == "assistant"
         )
-        if len(owner_evidence) + len(assistant_context) != len(conversation.turns):
+        if len(owner_evidence) + len(assistant_context) != len(source_segments):
             raise ValueError("Processor received an unsupported source role")
         if not owner_evidence:
             raise ValueError("Processor requires at least one new Owner evidence turn")
+        if scope_kind != "project" and project_summary is not None:
+            raise ValueError("Project Summary input is forbidden outside project scope")
+        selected_related = select_related_records(
+            related_records, scope_kind, scope_id, budgets=budgets
+        )
+        preceding = preceding_turn or ""
+        if preceding and len(preceding.encode("utf-8")) > budgets.preceding_turn_tokens:
+            preceding = ""
+        usage = measure_context(
+            new_evidence=tuple(segment.text for segment in source_segments),
+            preceding_turn=preceding,
+            continuation_summary=previous_continuation or "",
+            project_summary=project_summary or "",
+            related_records=selected_related,
+        )
+        usage.validate(budgets)
         proposal = self._provider.distill(
             ProcessingInput(
                 owner_evidence,
                 assistant_context,
                 previous_continuation,
                 project_id,
+                preceding or None,
+                project_summary,
+                selected_related,
             )
         )
         if not isinstance(proposal, ProcessingProposal):
             raise ValueError("semantic provider returned an invalid proposal")
+        output_payload = json.dumps(asdict(proposal), sort_keys=True, default=str)
+        measure_context(semantic_output=output_payload).validate(budgets)
         if proposal.continuation is not None:
             _validate_continuation(proposal.continuation)
         if not isinstance(proposal.record_proposals, tuple):
@@ -112,6 +211,24 @@ class Processor:
             record.validate()
             if record.scope != scope_kind or record.scope_id != scope_id:
                 raise ValueError("semantic provider proposal crosses resolved scope")
+        for instruction in proposal.candidate_operations:
+            if not isinstance(instruction, CandidateInstruction):
+                raise ValueError("semantic provider returned an invalid candidate instruction")
+            candidate = instruction.proposal
+            if candidate.scope != scope_kind or candidate.scope_id != scope_id:
+                raise ValueError("candidate instruction crosses resolved scope")
+        for conflict in proposal.conflict_proposals:
+            if not isinstance(conflict, ConflictProposal):
+                raise ValueError("semantic provider returned an invalid conflict proposal")
+            if conflict.scope != scope_kind or conflict.scope_id != scope_id:
+                raise ValueError("conflict proposal crosses resolved scope")
+        for replacement in proposal.supersede_proposals:
+            if not isinstance(replacement, SupersedeProposal):
+                raise ValueError("semantic provider returned an invalid supersede proposal")
+            if replacement.scope != scope_kind or replacement.scope_id != scope_id:
+                raise ValueError("supersede proposal crosses resolved scope")
+        if not all(isinstance(item, Abstention) for item in proposal.abstentions):
+            raise ValueError("semantic provider returned an invalid abstention")
         if proposal.project_summary is not None:
             if scope_kind != "project" or project_id != scope_id:
                 raise ValueError("Project Summary requires resolved project scope")
@@ -120,9 +237,14 @@ class Processor:
                 raise ValueError("Project Summary crosses resolved project scope")
         return ProcessedConversation(
             conversation=conversation,
+            source_segments=source_segments,
             continuation=proposal.continuation,
             record_proposals=proposal.record_proposals,
             project_summary=proposal.project_summary,
+            candidate_operations=proposal.candidate_operations,
+            conflict_proposals=proposal.conflict_proposals,
+            supersede_proposals=proposal.supersede_proposals,
+            abstentions=proposal.abstentions,
             provider=self._provider.name,
         )
 

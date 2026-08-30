@@ -168,18 +168,18 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Enforce total and per-context Processor budgets, chronological chunking,
+- [x] Enforce total and per-context Processor budgets, chronological chunking,
   turn-boundary splitting, deterministic oversized-turn segmentation, and
   bounded related-record selection. Complete the uniform source-segment receipt
   and segment-cursor behavior for multi-segment turns.
-- [ ] Validate the complete memory and candidate proposal set, including
+- [x] Validate the complete memory and candidate proposal set, including
   supersession, conflict, abstention, and ordinary Knowledge Candidates.
-- [ ] Implement Conflict Overflow and ordinary Knowledge Candidate publication
+- [x] Implement Conflict Overflow and ordinary Knowledge Candidate publication
   without adding recall eligibility or canonical authority.
-- [ ] Complete Run Manifest operations for every semantic outcome and artifact
+- [x] Complete Run Manifest operations for every semantic outcome and artifact
   kind, and repair replay checkpoints with the exact Manifest locator and
   source-segment cursor.
-- [ ] Reject invalid, cross-scope, identity-changing, unsupported-transition,
+- [x] Reject invalid, cross-scope, identity-changing, unsupported-transition,
   and credential-bearing output before partial publication.
 
 ### Exit criteria
@@ -390,12 +390,19 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   relink and exact-worktree resolution, Manifest/checkpoint `0.2`, mixed `0.1`
   reads, and intent-first recoverable publication. The aligned active suite
   passed 65 deterministic tests.
+- 2026-08-30 — Milestone 3 implemented conservative category/total budgets,
+  chronological chunks, UTF-8 segment receipts/cursors, related-record bounds,
+  supersession and conflict variants through overflow, ordinary Knowledge
+  Candidates and Owner-only dispositions, controlled abstention, and strict
+  Manifest source/operation/output validation. The aligned active suite passed
+  103 deterministic tests.
 
 ## Implementation review log
 
 | ID and milestone | Type | Description | Evidence or affected files | Impact | Safe action taken | Status | Recommended Owner decision |
 |---|---|---|---|---|---|---|---|
 | IRL-001 — Milestone 1 | risk | Codex Desktop's internal rollout JSONL remains a non-public and drift-prone source format. | `src/orca_memory/conversation.py`; `tests/conversation/test_codex_capture.py` | Synthetic deterministic coverage proves fail-closed behavior but not the current host's private rollout shape. | Support only positively identified Owner events and Responses-style assistant items marked `phase: final_answer`; exclude unknown shapes and require an isolated canary before routine use. | open | Permit a private local format canary during Milestone 7 without copying rollout content into tracked evidence. |
+| IRL-002 — Milestone 3 | follow-up | Processor token accounting uses a versioned conservative UTF-8 byte estimate rather than a model-specific tokenizer. | `src/orca_memory/segmentation.py`; `tests/step3/test_segmentation.py` | Some multilingual or long inputs may be chunked earlier than strictly necessary, but accepted ceilings cannot be exceeded. | Record the estimator in segmentation parameters so a later governed policy can replace it without silent replay ambiguity. | resolved | None; retain the conservative policy unless measured routine-use evidence justifies a versioned replacement. |
 
 ## Related documents
 

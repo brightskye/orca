@@ -51,11 +51,11 @@ was accepted and promoted on 2026-08-30.
 | Capability | Status | Evidence or limitation |
 |---|---|---|
 | Owner and final-assistant Codex normalization, privacy filtering, partial-tail deferral, and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, synthetic deterministic capture tests, and Processor evidence/context separation tests |
-| Continuation Summary semantic proposal and validation | Partial | Replaceable provider call, bounded evidence/context handoff, and controlled summary publication are implemented; Milestone 3 budgets and chunking remain |
-| Run Manifest, scan-based replay detection, checkpoint-last publication, `no_memory`, and source-revision handling | Partial | Unsegmented Manifest/checkpoint `0.2`, source/operation/output joins, mixed `0.1` reads, and publication-intent recovery are implemented; segmented cursors remain Milestone 3 work |
+| Bounded Processor, Continuation Summary, and controlled proposal validation | Implemented | Category/total budgets, chunks, UTF-8 segments, overlap, related-record bounds, output limits, and controlled outcomes are directly tested |
+| Run Manifest, replay, checkpoint-last publication, `no_memory`, and source/segmentation conflict handling | Implemented | Manifest/checkpoint `0.2`, exact segment cursors, strict source/operation/output joins, mixed `0.1` reads, and publication-intent recovery are directly tested |
 | AgentCairn prevalidated Distiller seam | Partial | Adapter and focused tests exist; it is not wired into the Processor |
 | Typed Memory Records, Project Summary, and project registration/relink | Implemented | Validated records, add/support/update, summary refresh, exact-worktree resolution, and recoverable mapping tests |
-| Knowledge Candidates and conflict records | Planned | Accepted Phase 1 design; Milestone 3 implementation remains |
+| Knowledge Candidates, supersession, conflict records, and overflow | Implemented | Strict noncanonical schemas, stable variants, Owner-only review/disposition primitives, distinct placement, and joined publication tests |
 | Interaction observations, profiles, and compiled guidance | Planned | Accepted contracts exist; no active implementation |
 | Recall, MCP surface, skills, and retrieval projections | Planned | Accepted design; no active implementation |
 | Lifecycle hooks, queue, retry spool, catch-up scheduling, and `$orca-save` | Partial | Secure redacted spool creation, three-attempt accounting, 72-hour expiry, content-free receipt, and success cleanup are tested library behavior; no hook or worker wiring exists |
@@ -65,10 +65,6 @@ was accepted and promoted on 2026-08-30.
 
 ## Known divergence
 
-- Processor context budgets, chunking, overlap, related-record selection, and
-  the full proposal set are designed but not implemented.
-- Storage's `0.2` receipts currently cover the unsegmented Milestone 2 slice;
-  multi-segment source cursors and the complete outcome set remain Milestone 3.
 - Runtime hooks, secure retry handling, retrieval reconciliation, interaction
   consolidation, and routine deployment are designed but not implemented.
 - Codex's internal rollout format remains non-public. The connector supports the
@@ -81,9 +77,9 @@ These are implementation gaps, not permission to weaken the accepted contracts.
 
 - Design hardening: RFC-0001, RFC-0002, and RFC-0003 are accepted and promoted.
   The four post-migration design-hardening steps are complete.
-- Phase 1 implementation: Milestones 1 and 2 are implemented and
-  deterministically verified. The next bounded slice is Processor budgets and
-  segmentation, conflicts, candidates, and complete provenance outcomes.
+- Phase 1 implementation: Milestones 1 through 3 are implemented and
+  deterministically verified. The next bounded slice is scoped interaction
+  observations, profile lifecycle, and deterministic guidance.
 
 The accepted plan owns Phase 1 implementation sequence and milestone progress;
 this document continues to own the verified current-state snapshot.
@@ -93,10 +89,10 @@ this document continues to own the verified current-state snapshot.
 Architecture, specification, and ADR extraction are accepted. ADR-0001 remains
 superseded history; ADR-0002 and ADR-0003 remain future-only proposal evidence;
 ADR-0004 through ADR-0012 are accepted current rationale. Knowledge Candidate
-and Configuration design choices are no longer open; implementation remains
-planned. RFC-0001 resolved the Manifest, checkpoint, provenance-join, and
-interrupted-publication design. Its unsegmented slice is implemented; segmented
-receipts remain Milestone 3 work. RFC-0002 resolved Project Registration,
+and Configuration design choices are no longer open. Knowledge Candidates and
+the complete segmented provenance slice are implemented. RFC-0001 resolved the
+Manifest, checkpoint, provenance-join, and interrupted-publication design, now
+implemented for the active pipeline. RFC-0002 resolved Project Registration,
 Project Relink, exact-worktree reuse, and mapping-intent recovery, which are now
 implemented and deterministically tested.
 
@@ -112,7 +108,7 @@ interaction, configuration, deployment, and readiness work listed above.
 
 - Repository and documentation review date: 2026-08-30.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current active regression command passed 65 tests on
+- The complete current active regression command passed 103 tests on
   2026-08-30; it is not Phase 1 end-to-end acceptance.
 - Historical migration evidence remains in the non-authoritative
   [migration working set](_working/pds-migration/README.md).
