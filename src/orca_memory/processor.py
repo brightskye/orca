@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from orca_memory.conversation import ConversationBatch, NormalizedTurn
+from orca_memory.memory import ProjectSummary, RecordProposal
 from orca_memory.privacy import contains_secret
 
 
@@ -39,6 +40,8 @@ class ProcessingProposal:
     """Untrusted semantic output; absence means a valid no-memory result."""
 
     continuation: ContinuationSummary | None
+    record_proposals: tuple[RecordProposal, ...] = ()
+    project_summary: ProjectSummary | None = None
 
 
 class SemanticProvider(Protocol):
@@ -56,6 +59,8 @@ class ProcessedConversation:
 
     conversation: ConversationBatch
     continuation: ContinuationSummary | None
+    record_proposals: tuple[RecordProposal, ...]
+    project_summary: ProjectSummary | None
     provider: str
     policy: str = PROCESSOR_POLICY
 
@@ -74,6 +79,8 @@ class Processor:
         *,
         previous_continuation: str | None,
         project_id: str | None,
+        scope_kind: str,
+        scope_id: str,
     ) -> ProcessedConversation:
         owner_evidence = tuple(
             turn for turn in conversation.turns if turn.source_role == "owner"
@@ -97,9 +104,25 @@ class Processor:
             raise ValueError("semantic provider returned an invalid proposal")
         if proposal.continuation is not None:
             _validate_continuation(proposal.continuation)
+        if not isinstance(proposal.record_proposals, tuple):
+            raise ValueError("semantic provider record proposals must be a tuple")
+        for record in proposal.record_proposals:
+            if not isinstance(record, RecordProposal):
+                raise ValueError("semantic provider returned an invalid record proposal")
+            record.validate()
+            if record.scope != scope_kind or record.scope_id != scope_id:
+                raise ValueError("semantic provider proposal crosses resolved scope")
+        if proposal.project_summary is not None:
+            if scope_kind != "project" or project_id != scope_id:
+                raise ValueError("Project Summary requires resolved project scope")
+            proposal.project_summary.validate()
+            if proposal.project_summary.project_id != project_id:
+                raise ValueError("Project Summary crosses resolved project scope")
         return ProcessedConversation(
             conversation=conversation,
             continuation=proposal.continuation,
+            record_proposals=proposal.record_proposals,
+            project_summary=proposal.project_summary,
             provider=self._provider.name,
         )
 

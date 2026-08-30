@@ -21,5 +21,11 @@ jobs:
           uv run --extra agentcairn python -m unittest
           tests/conversation/test_codex_capture.py
           tests/conversation/test_retry_spool.py
+          tests/memory/test_records.py
+          tests/project/test_registry.py
+          tests/project/test_mapping_publication.py
           tests/step3/test_pipeline.py
+          tests/step3/test_typed_pipeline.py
+          tests/step3/test_provenance.py
+          tests/step3/test_publication.py
           tests/agentcairn/test_distiller.py

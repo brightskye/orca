@@ -49,7 +49,7 @@ a hidden or implied procedure.
 ## Scope
 
 This limited runbook covers the `/workspace/projects/orca` checkout and the
-current four-module regression command. It does not authorize use of a personal
+current active regression command. It does not authorize use of a personal
 or synchronized vault, code under `legacy/manual-prototype/`, later-phase topology, or any
 canonical-memory mutation.
 
@@ -127,21 +127,28 @@ UV_CACHE_DIR=/tmp/orca-uv-cache \
 uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
   tests/conversation/test_retry_spool.py \
+  tests/memory/test_records.py \
+  tests/project/test_registry.py \
+  tests/project/test_mapping_publication.py \
   tests/step3/test_pipeline.py \
+  tests/step3/test_typed_pipeline.py \
+  tests/step3/test_provenance.py \
+  tests/step3/test_publication.py \
   tests/agentcairn/test_distiller.py
 ```
 
 Expected result for the current checkout:
 
 ```text
-Ran 25 tests
+Ran 65 tests
 
 OK
 ```
 
-This command passed 25 tests on 2026-08-30. It covers the implemented capture,
-retry-spool primitives, Continuation-Summary/Manifest/checkpoint, and AgentCairn
-Distiller seams only. It is not a runtime health check or Phase 1 acceptance.
+This command passed 65 tests on 2026-08-30. It covers the implemented capture,
+retry-spool primitives, Typed Memory and Project Summary contracts, project
+mapping, unsegmented Manifest/checkpoint `0.2`, recoverable publication, and
+AgentCairn Distiller seams. It is not a runtime health check or Phase 1 acceptance.
 The accepted [Test Strategy](../07-quality/test-strategy.md) owns suite coverage.
 
 ## Routine operations
@@ -159,10 +166,10 @@ Its design description must not be executed as if it were a current command.
 **Unavailable as an operator procedure:** There is no supported log command or
 diagnostics interface.
 
-The initial library slice can publish immutable `0.1` Run Manifests and local
-`0.1` checkpoints when called programmatically. Accepted `0.2` source,
-operation, output, segment-cursor, and publication-intent behavior is not
-implemented. Its meaning and paths are defined by the [Provenance
+The library slice publishes immutable `0.2` Run Manifests and local `0.2`
+checkpoints with source/operation/output joins and intent-first recovery for
+unsegmented sources. Multi-segment cursor behavior remains Milestone 3 work.
+Its meaning and paths are defined by the [Provenance
 Ledger](../03-specifications/provenance-ledger.md), but no public inspection tool
 exists. Do not inspect or publish local
 `evidence/`, `index.md`, personal rollouts, private vault contents, credentials,
@@ -192,14 +199,14 @@ boundaries, not executable procedures:
 
 | Condition | Current evidence | Safe boundary |
 |---|---|---|
-| Exact replay after checkpoint loss | **Tested library behavior** | Durable Manifest scan prevents a second semantic result; current repair omits an available Manifest locator |
+| Exact replay after checkpoint loss | **Tested library behavior** | Durable Manifest scan prevents a second semantic result and repairs the checkpoint with the exact Manifest locator |
 | Failure before checkpoint publication | **Tested library behavior** | Leave progress unchanged so a later retry can recover |
-| Interrupted `0.2` publication | **Accepted design; unavailable** | A valid fixed publication intent completes without another semantic call; mismatch or orphan state requires human repair |
+| Interrupted `0.2` publication | **Tested library behavior; operator procedure unavailable** | A valid fixed publication intent completes without another semantic call; mismatch requires human repair |
 | Partial trailing JSONL | **Tested library behavior** | Complete preceding records proceed while the incomplete tail remains deferred at the last complete byte position |
 | Invalid or credential-bearing generated output | **Tested library behavior for output secrets** | Publish no affected output and leave progress retryable |
 | Missing or stale retrieval index | **Unavailable** | Leave Markdown unchanged; no rebuild command exists |
 | Retry-spool failure or expiry | **Tested library behavior; operator procedure unavailable** | Private redacted creation, three attempts, 72-hour expiry, content-free receipt, and success cleanup are tested; no lifecycle hook invokes them yet |
-| Interrupted project registration or relink | **Accepted design; unavailable** | Preserve the Project Mapping Intent; matching partial state may complete, but mismatch or orphan state requires Owner repair |
+| Interrupted project registration or relink | **Tested library behavior; operator procedure unavailable** | Preserve the Project Mapping Intent; matching partial state completes, while mismatch requires Owner repair |
 
 Do not manually edit immutable Manifests or advance checkpoints to force
 recovery. Record the failure and escalate until the owning implementation and

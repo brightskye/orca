@@ -132,25 +132,37 @@ Scenario definitions and verdicts remain in the
 | `tests/conversation/test_codex_capture.py` | 10 | AGENTS and CI | Owner/final-assistant classification, bounded offsets, exclusions, privacy, partial tails, drift failure, redaction, deterministic no-write behavior |
 | `tests/conversation/test_retry_spool.py` | 4 | AGENTS and CI | Private redacted spool permissions, attempt bound, expiry receipt, and success cleanup |
 | `tests/step3/test_pipeline.py` | 8 | AGENTS and CI | Evidence/context separation plus initial Continuation Summary, Manifest, replay, checkpoint, `no_memory`, output-secret, source-revision behavior |
+| `tests/memory/test_records.py` | 14 | AGENTS and CI | Typed Memory schemas, kinds, scope, identity, bodies, filenames, add/support/update, and Project Summary validation |
+| `tests/project/test_registry.py` | 9 | AGENTS and CI | Stable project identity, exact mapping, Owner choice, Unassigned, registration, relink, and exact-worktree reuse |
+| `tests/project/test_mapping_publication.py` | 4 | AGENTS and CI | Intent-first project registration/relink recovery, mismatch handling, and content-free orphan detection |
+| `tests/step3/test_typed_pipeline.py` | 5 | AGENTS and CI | Typed add/support/update, stable identity, Project Summary refresh, joined receipts, and interrupted recovery |
+| `tests/step3/test_provenance.py` | 3 | AGENTS and CI | Manifest/checkpoint `0.2`, mixed `0.1` reads, exact replay, and conflict detection |
+| `tests/step3/test_publication.py` | 5 | AGENTS and CI | Intent/artifact/Manifest/checkpoint order, fault recovery, mismatch, and path containment |
 | `tests/agentcairn/test_distiller.py` | 3 | AGENTS and CI | Prevalidated Distiller seam and fail-closed unknown/canonical cases |
 
-This 25-test inventory is a current regression baseline, not the complete Phase
+This 65-test inventory is a current regression baseline, not the complete Phase
 1 suite and not end-to-end acceptance.
 
 ## Current and target commands
 
-AGENTS and CI use the canonical active-suite command for the current four modules:
+AGENTS and CI use the canonical active-suite command:
 
 ```bash
 UV_CACHE_DIR=/tmp/orca-uv-cache \
 uv run --extra agentcairn python -m unittest \
   tests/conversation/test_codex_capture.py \
   tests/conversation/test_retry_spool.py \
+  tests/memory/test_records.py \
+  tests/project/test_registry.py \
+  tests/project/test_mapping_publication.py \
   tests/step3/test_pipeline.py \
+  tests/step3/test_typed_pipeline.py \
+  tests/step3/test_provenance.py \
+  tests/step3/test_publication.py \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 25 current tests on 2026-08-30. That verifies the
+This exact command passed all 65 current tests on 2026-08-30. That verifies the
 command and current regression baseline only; it does not satisfy the complete
 Phase 1 acceptance scenarios.
 
@@ -259,7 +271,8 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 
 ## Adoption gaps
 
-- Most accepted Phase 1 contracts have no implementation tests yet.
+- Interaction, retrieval, runtime, attention, and complete-loop contracts do
+  not yet have active implementation tests.
 - No current local-runtime end-to-end or operational canary proves Phase 1.
 
 ## Related documents

@@ -22,13 +22,18 @@ class Step3Pipeline:
     ) -> PublicationResult:
         if not conversation.turns:
             raise ValueError("Step 3 requires at least one normalized turn")
+        self._storage.recover_pending_publications()
         new_conversation = self._storage.select_unprocessed(conversation)
         if not new_conversation.turns:
             return self._storage.record_replay(conversation)
-        previous = self._storage.load_continuation(conversation.conversation_id)
+        previous = self._storage.load_continuation(
+            conversation.conversation_id, scope=scope
+        )
         processed = self._processor.process(
             new_conversation,
             previous_continuation=previous,
             project_id=scope.scope_id if scope.kind == "project" else None,
+            scope_kind=scope.kind,
+            scope_id=scope.scope_id,
         )
         return self._storage.publish(processed, scope=scope)

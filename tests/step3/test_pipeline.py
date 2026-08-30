@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
 
 from orca_memory.conversation import ConversationBatch, NormalizedTurn
 from orca_memory.pipeline import Step3Pipeline
@@ -65,12 +64,13 @@ def _summary(*, state: str = "The publication flow is accepted.") -> Continuatio
 
 
 class Step3PipelineTests(unittest.TestCase):
-    def _storage(self, root: Path) -> Storage:
+    def _storage(self, root: Path, *, publication_fault=None) -> Storage:
         return Storage(
             root / "vault",
             root / "runtime",
             clock=lambda: datetime(2026, 8, 29, 12, 0, tzinfo=timezone.utc),
             id_factory=lambda: "fixed-run-id",
+            publication_fault=publication_fault,
         )
 
     def test_publishes_continuation_manifest_then_checkpoint(self) -> None:
@@ -97,16 +97,24 @@ class Step3PipelineTests(unittest.TestCase):
 
             self.assertIsNotNone(result.manifest_path)
             manifest = json.loads(result.manifest_path.read_text(encoding="utf-8"))
-            self.assertEqual(manifest["schema_version"], "orca-run-manifest/0.1")
+            self.assertEqual(manifest["schema"], "orca-run-manifest/0.2")
             self.assertEqual(manifest["status"], "success")
             self.assertEqual(manifest["sources"][0]["turn_id"], "turn-1")
             self.assertEqual(manifest["sources"][0]["source_role"], "owner")
-            self.assertEqual(manifest["outputs"][0]["sha256"], _sha256(summary_path))
+            self.assertEqual(
+                manifest["sources"][0]["segment"]["content_sha256"],
+                _sha256(path=None, payload=_batch().turns[0].text.encode()),
+            )
+            self.assertEqual(manifest["operations"][0]["operation"], "summary-refresh")
+            self.assertEqual(
+                manifest["outputs"][0]["after_sha256"], _sha256(summary_path)
+            )
 
             checkpoints = list((root / "runtime" / "checkpoints").glob("**/*.json"))
             self.assertEqual(len(checkpoints), 1)
             checkpoint = json.loads(checkpoints[0].read_text(encoding="utf-8"))
-            self.assertEqual(checkpoint["processed_through_turn"], "turn-1")
+            self.assertEqual(checkpoint["schema_version"], "orca-checkpoint/0.2")
+            self.assertEqual(checkpoint["processed_through"]["turn_id"], "turn-1")
             self.assertEqual(
                 checkpoint["manifest_path"],
                 result.manifest_path.relative_to(root / "vault").as_posix(),
@@ -180,13 +188,16 @@ class Step3PipelineTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             provider = FakeProvider(ProcessingProposal(_summary()))
-            storage = self._storage(root)
+            def stop_after_manifest(point: str) -> None:
+                if point == "after-manifest":
+                    raise OSError("disk full")
+
+            storage = self._storage(root, publication_fault=stop_after_manifest)
             pipeline = Step3Pipeline(Processor(provider), storage)
-            with patch.object(storage, "_write_checkpoint", side_effect=OSError("disk full")):
-                with self.assertRaisesRegex(OSError, "disk full"):
-                    pipeline.run(
-                        _batch(), scope=MemoryScope("general", "general")
-                    )
+            with self.assertRaisesRegex(OSError, "disk full"):
+                pipeline.run(
+                    _batch(), scope=MemoryScope("general", "general")
+                )
 
             manifests = list((root / "vault").glob("**/manifests/**/*.json"))
             self.assertEqual(len(manifests), 1)
@@ -232,7 +243,7 @@ class Step3PipelineTests(unittest.TestCase):
             pipeline = Step3Pipeline(Processor(provider), self._storage(root))
             pipeline.run(_batch(), scope=MemoryScope("general", "general"))
 
-            with self.assertRaisesRegex(ValueError, "source revision"):
+            with self.assertRaisesRegex(ValueError, "source or segmentation conflict"):
                 pipeline.run(
                     _batch(text_hash="changed-hash"),
                     scope=MemoryScope("general", "general"),
@@ -240,10 +251,12 @@ class Step3PipelineTests(unittest.TestCase):
             self.assertEqual(provider.calls, 1)
 
 
-def _sha256(path: Path) -> str:
+def _sha256(path: Path | None, payload: bytes | None = None) -> str:
     import hashlib
 
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    value = path.read_bytes() if path is not None else payload
+    assert value is not None
+    return hashlib.sha256(value).hexdigest()
 
 
 if __name__ == "__main__":

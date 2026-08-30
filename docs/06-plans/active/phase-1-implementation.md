@@ -133,19 +133,19 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
 
 ### Work
 
-- [ ] Implement validated Typed Memory Record identities, controlled kinds,
+- [x] Implement validated Typed Memory Record identities, controlled kinds,
   scope, status, review state, bodies, filenames, and physical placement.
-- [ ] Implement deterministic Project Registration and Project Relink, the
+- [x] Implement deterministic Project Registration and Project Relink, the
   `orca-project/0.1` registry record, exact local Git-worktree reuse, and
   `orca-project-mapping-intent/0.1` recovery.
-- [ ] Implement `add`, exact `support`, and confirmed `update` operations with
+- [x] Implement `add`, exact `support`, and confirmed `update` operations with
   Storage-owned identity, paths, timestamps, and renames.
-- [ ] Refresh Conversation and Project Summaries after material changes and
+- [x] Refresh Conversation and Project Summaries after material changes and
   avoid rewrites after support-only or no-change outcomes.
-- [ ] Implement `orca-run-manifest/0.2` source/operation/output joins and
+- [x] Implement `orca-run-manifest/0.2` source/operation/output joins and
   `orca-checkpoint/0.2` for the unsegmented Typed Memory slice while preserving
   immutable `0.1` read compatibility.
-- [ ] Prepare one fixed private publication intent before artifact mutation and
+- [x] Prepare one fixed private publication intent before artifact mutation and
   recover matching before/after states without another semantic call.
 
 ### Exit criteria
@@ -385,6 +385,11 @@ runtime wiring, configuration loading, and deployment remain partial or planned.
   retry-spool primitives. Processor receives Owner evidence separately from
   assistant context. The
   active four-module suite passed 25 tests and CI was aligned to the same route.
+- 2026-08-30 — Milestone 2 implemented validated Typed Memory Records, stable
+  add/support/update identity, Project Summary refresh, project registration,
+  relink and exact-worktree resolution, Manifest/checkpoint `0.2`, mixed `0.1`
+  reads, and intent-first recoverable publication. The aligned active suite
+  passed 65 deterministic tests.
 
 ## Implementation review log
 

@@ -966,6 +966,9 @@ wheels = [
 name = "orca-memory"
 version = "0.1.0"
 source = { editable = "." }
+dependencies = [
+    { name = "pyyaml" },
+]
 
 [package.optional-dependencies]
 agentcairn = [
@@ -973,7 +976,10 @@ agentcairn = [
 ]
 
 [package.metadata]
-requires-dist = [{ name = "agentcairn", marker = "extra == 'agentcairn'", specifier = "==0.25.2" }]
+requires-dist = [
+    { name = "agentcairn", marker = "extra == 'agentcairn'", specifier = "==0.25.2" },
+    { name = "pyyaml", specifier = "==6.0.3" },
+]
 provides-extras = ["agentcairn"]
 
 [[package]]
