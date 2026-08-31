@@ -118,22 +118,39 @@ When automatic lifecycle handling is disabled, the hook MUST stop before
 transcript access, capture, redaction, retry-spool creation, queueing, or
 provider invocation. This does not create an unredacted path: enabling the
 lifecycle retains every exclusion and redaction rule in this section, while a
-redaction failure sends nothing.
+redaction failure sends nothing. Automatic catch-up MUST stop before rollout
+discovery, and an automatic worker MUST recheck the setting before starting
+each queued unit. Disabling cannot cancel a provider request already in
+progress.
+
+### Scope resolution
+
+Before an enabled lifecycle hook queues work, Governance MUST resolve scope
+deterministically from the hook working directory and validated local Project
+Root Mappings. An exact mapped workspace uses its permanent Project Identity.
+For an unmapped workspace, only an explicit content-free Owner choice for that
+conversation may select General. Missing, invalid, or ambiguous evidence stays
+Unassigned. Project mapping evidence takes precedence, and neither Connector nor
+Processor may ask a model to infer scope.
 
 ### Source completion and handoff
 
 1. A partial trailing JSONL record MUST remain unprocessed and wait for a later
    run. Complete preceding records MAY proceed.
-2. `PreCompact` MAY hand the worker a pointer to the still-available agent-owned
-   source.
-3. Before a `SessionEnd` hook returns, only unprocessed permitted normalized
+2. A private, content-free source cursor MUST record the last durably handed-off
+   complete byte position for each connector, conversation, and source path.
+   It MUST advance monotonically and remain outside the vault and Git.
+3. `PreCompact` MAY hand the worker a pointer to the still-available agent-owned
+   source beginning at that cursor.
+4. Before a `SessionEnd` hook returns, only unprocessed permitted normalized
    evidence MAY be written to a private local retry spool when the original
-   source may disappear.
-4. A retry spool MUST be outside the vault and Git, use fixed secure permissions,
+   source may disappear. The source cursor advances only after that spool is
+   durably queued.
+5. A retry spool MUST be outside the vault and Git, use fixed secure permissions,
    and contain only the redacted representation.
-5. The same Conversation interface and privacy policy MUST apply whether the
+6. The same Conversation interface and privacy policy MUST apply whether the
    worker reads the original source or a retry spool.
-6. The retry spool MUST be deleted only after successful output publication,
+7. The retry spool MUST be deleted only after successful output publication,
    Run Manifest publication, and checkpoint advancement. It receives at most
    three automatic attempts. Its configurable retention defaults to 72 hours;
    terminal expiry deletes its content and retains only a content-free receipt.
@@ -176,18 +193,19 @@ Raw agent source, retry material, content-free receipts, credentials, and locks
 MUST remain outside the vault and tracked source. No capture interface is
 publicly network-accessible in Phase 1.
 
-## Compatibility and current divergence
+## Compatibility and implementation
 
 The interface preserves the accepted Phase 1 behavior migrated from the
 [Memory System Contract](../governance/memory-system-contract.md),
 [Architecture Overview](../02-architecture/overview.md), and
 [Runtime Architecture](../02-architecture/runtime.md).
 
-Current code positively normalizes Owner `UserMessage` completion events,
-redacts credentials, preserves source identity, and creates no raw copy. It does
-not yet admit permitted assistant context, defer partial trailing JSONL, apply
-the full private-session policy, or implement the retry spool. The authoritative
-implementation snapshot is [Current Status](../STATUS.md).
+Current code positively normalizes supported Owner and permitted assistant
+events, rejects private and unsupported sessions, redacts credentials,
+preserves source identity, defers partial trailing JSONL, and creates no raw
+copy. SessionEnd uses the private bounded retry spool and source cursor defined
+above. The authoritative implementation snapshot is
+[Current Status](../STATUS.md).
 
 ## Acceptance criteria
 

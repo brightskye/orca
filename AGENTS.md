@@ -79,6 +79,8 @@ uv run --extra agentcairn python -m unittest \
   tests/runtime/test_runtime.py \
   tests/runtime/test_attention.py \
   tests/runtime/test_application.py \
+  tests/runtime/test_owner_review.py \
+  tests/runtime/test_backup.py \
   tests/runtime/test_codex_provider.py \
   tests/runtime/test_codex_hook.py \
   tests/acceptance/test_readiness_boundaries.py \

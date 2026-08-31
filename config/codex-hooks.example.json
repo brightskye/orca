@@ -34,7 +34,7 @@
           {
             "type": "command",
             "command": "uv run --project \"$(git rev-parse --show-toplevel)\" orca-codex-hook",
-            "timeout": 3,
+            "timeout": 10,
             "statusMessage": "Spooling bounded Orca capture"
           }
         ]

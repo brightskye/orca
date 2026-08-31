@@ -124,6 +124,45 @@ class ProjectMappingPublicationTests(unittest.TestCase):
                 publisher.recover(publisher.pending_intents()[0])
             self.assertEqual(len(publisher.pending_intents()), 1)
 
+    def test_recovery_refuses_intent_for_another_host_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            workspace = root / "workspace"
+            workspace.mkdir()
+            host = root / "host.yaml"
+            other_host = root / "other-host.yaml"
+            _host_config(host)
+            _host_config(other_host)
+            plan = prepare_registration(
+                workspace,
+                "Orca",
+                ProjectRegistry(),
+                project_id="proj_fixed",
+                now=NOW,
+            )
+            publisher = ProjectMappingPublisher(root / "vault", root / "runtime")
+
+            def stop(point: str) -> None:
+                if point == "after-intent":
+                    raise OSError("simulated stop")
+
+            with self.assertRaises(OSError):
+                publisher.publish(
+                    plan,
+                    host_config_path=host,
+                    operation_id="map-1",
+                    fault=stop,
+                )
+
+            with self.assertRaisesRegex(
+                ProjectMappingRepairRequired, "another host configuration"
+            ):
+                publisher.recover(
+                    publisher.pending_intents()[0],
+                    host_config_path=other_host,
+                )
+            self.assertEqual(len(publisher.pending_intents()), 1)
+
     def test_missing_intent_with_unlinked_record_exposes_content_free_repair(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -17,26 +17,26 @@ last_verified_against_code: 2026-08-31
 
 ## Purpose
 
-Describe the supported local Phase 1 operator procedures and state their
-authority, privacy, recovery, and deployment limits plainly.
+Describe the supported local Phase 1 operator procedures after deployment and
+state their authority, privacy, and recovery limits plainly.
 
 ## This document owns
 
-- Once accepted, executable local installation, start/stop, health, routine
-  operation, diagnostics, backup/restore, recovery, rebuild, troubleshooting,
-  and escalation procedures.
+- Executable local start/stop, health, routine operation, diagnostics,
+  backup/restore, recovery, rebuild, troubleshooting, and escalation procedures.
 
 ## This document does not own
 
-- Runtime behavior, configuration schemas, implementation status, test
-  strategy, or permission to operate on a personal vault.
+- Installation, initial configuration, lifecycle activation, runtime behavior,
+  configuration schemas, implementation status, or test strategy.
 
 ## Authority and status boundary
 
-This runbook is `accepted`/`normative`. A local one-shot CLI and composition
-root are implemented, but private Codex/provider/vault deployment is not yet
-Owner-authorized. The commands below are verified against isolated synthetic
-fixtures; they do not authorize personal data or credentials.
+This runbook is `accepted`/`normative`. Phase 1 and its configured local
+Codex/provider/vault deployment were accepted by the Owner on 2026-08-31. The
+[Deployment Guide](deployment.md) owns installation, activation, and the
+bounded first-canary procedure. This runbook does not authorize a different
+vault, provider, sample, topology, or canonical mutation.
 
 | Label | Meaning |
 |---|---|
@@ -46,10 +46,10 @@ fixtures; they do not authorize personal data or credentials.
 
 ## Scope
 
-This limited runbook covers the `/workspace/projects/orca` checkout and the
-current active regression command. It does not authorize use of a personal
-or synchronized vault, code under `legacy/manual-prototype/`, later-phase topology, or any
-canonical-memory mutation.
+This runbook covers the accepted `/workspace/projects/orca` Phase 1 deployment,
+its configured local vault, and the current active regression command. It does
+not authorize a synchronized vault, code under `legacy/manual-prototype/`, a
+later-phase topology, or any canonical-memory mutation.
 
 ## Prerequisites
 
@@ -61,24 +61,22 @@ For the verified repository procedure:
   `/tmp/orca-uv-cache`.
 - Do not point tests at a personal vault or real Codex rollout store.
 
-Private operation additionally requires Owner authorization for the configured
-vault, Codex rollout, and semantic-provider mechanism.
+New private samples, providers, vaults, or expanded lifecycle scope require
+separate Owner authorization.
 
 ## Installation
 
-Install the local package environment with `uv sync --extra agentcairn`. Verify
-the entry point with `uv run orca --help`. This installs no daemon or hook.
-
-`uv run` may resolve the isolated environment needed for the verified regression
-procedure below. That is test-environment preparation, not Orca deployment.
+Follow the [Deployment Guide](deployment.md#1-install-the-local-environment).
+It installs the local package environment and verifies the tracked project hook
+configuration. It installs no daemon.
 
 ## Configuration
 
-Create ignored `config/host.yaml` and vault-local
-`System/Orca Memory/orca-memory.yaml` from the safe examples, then validate:
+Follow the [Deployment Guide](deployment.md#3-configure-the-host) to create the
+ignored host configuration and vault-local policy, then validate:
 
 ```bash
-uv run orca --registered-adapter <configured-adapter-id> validate
+uv run orca validate
 ```
 
 - [`config/host.example.yaml`](../../config/host.example.yaml) is a safe tracked
@@ -87,18 +85,40 @@ uv run orca --registered-adapter <configured-adapter-id> validate
   safe tracked structural fixture for vault policy fields.
 - Actual `config/host.yaml`, credentials, paths, mappings, `.runtime/` state, and
   private memory must remain local and ignored.
-- The vault path may eventually come only from `config/host.yaml` or
-  `ORCA_VAULT_PATH`, with conflict-on-difference validation defined by the
+- The vault path comes only from `config/host.yaml` or `ORCA_VAULT_PATH`, with
+  conflict-on-difference validation defined by the
   [Configuration Specification](../03-specifications/configuration.md).
 
 Validation is read-only and must pass before another runtime command.
+
+### Project registration and relink
+
+Register one Owner-confirmed workspace and permanent Project Alias with:
+
+```bash
+uv run orca project register \
+  --root <absolute-existing-workspace-root> --alias <unique-project-alias>
+```
+
+For another checkout that the Owner confirms is the same project, relink it to
+the existing permanent identity:
+
+```bash
+uv run orca project relink \
+  --root <absolute-existing-workspace-root> --project-id <project-id>
+```
+
+`--project-alias <existing-alias>` may be used instead of `--project-id`. Both
+commands publish a private mapping intent first and reconcile the Project
+Registry record and ignored host mapping recoverably. Registration creates one
+permanent identity; relink does not create or rewrite the project record.
 
 ## Start
 
 Run the deterministic session-start path with:
 
 ```bash
-uv run orca --registered-adapter <configured-adapter-id> start \
+uv run orca start \
   --session-id <safe-session-id> --context general
 ```
 
@@ -107,8 +127,8 @@ conversation processing.
 
 ### Codex lifecycle-hook activation
 
-[`config/codex-hooks.example.json`](../../config/codex-hooks.example.json) is a
-validated hook definition for `SessionStart`, `PreCompact`, and `SessionEnd`.
+The tracked [`.codex/hooks.json`](../../.codex/hooks.json) is the installed
+project hook definition for `SessionStart`, `PreCompact`, and `SessionEnd`.
 The installed dispatcher is inert while the vault configuration contains or
 defaults to:
 
@@ -121,17 +141,40 @@ Change the exact boolean to `true` only when the Owner wants automatic handling
 of future permitted sessions in this trusted project. When enabled, Orca
 locally applies eligibility and credential redaction before queue or provider
 handoff. If exclusion or redaction cannot complete, nothing is sent. Setting it
-back to `false` stops automatic transcript access, redaction, queueing, guidance
-loading, and model calls; explicit operator commands remain available.
+back to `false` stops new hook handling and catch-up before transcript discovery.
+The worker reloads the setting before each automatic queued unit and leaves
+disabled work pending without consuming an attempt. It cannot cancel a provider
+request already in progress. Explicit operator commands remain available.
+
+### Conversation scope
+
+Enabled lifecycle hooks normalize the Codex working directory and use an exact
+valid `project_root_mappings` entry automatically. To confirm that one unmapped,
+genuinely projectless conversation belongs to General, record the explicit
+Owner choice using its Codex session identity:
+
+```bash
+uv run orca scope general --conversation-id <safe-session-id>
+```
+
+To make the conversation Unassigned again:
+
+```bash
+uv run orca scope unassigned --conversation-id <safe-session-id>
+```
+
+The choice is a private, content-free local runtime record. A valid Project
+mapping takes precedence over it. Without either proof, the lifecycle stays
+Unassigned; Orca never asks the model to guess.
 
 ## Stop
 
-Run `uv run orca --registered-adapter <configured-adapter-id> stop`. Orca uses
+Run `uv run orca stop`. Orca uses
 one-shot workers, so the command confirms that there is no daemon to terminate.
 
 ## Health check
 
-Run `uv run orca --registered-adapter <configured-adapter-id> health`. It
+Run `uv run orca health`. It
 validates configuration and reports queue count; it is not provider health.
 
 ## Repository regression check
@@ -171,6 +214,8 @@ uv run --extra agentcairn python -m unittest \
   tests/runtime/test_runtime.py \
   tests/runtime/test_attention.py \
   tests/runtime/test_application.py \
+  tests/runtime/test_owner_review.py \
+  tests/runtime/test_backup.py \
   tests/runtime/test_codex_provider.py \
   tests/runtime/test_codex_hook.py \
   tests/acceptance/test_readiness_boundaries.py \
@@ -181,28 +226,79 @@ uv run --extra agentcairn python -m unittest \
 Expected result for the current checkout:
 
 ```text
-Ran 185 tests
+Ran 228 tests
 
 OK
 ```
 
-This command passed 185 tests on 2026-08-30. It covers the implemented capture,
+The current baseline command passed 228 tests on 2026-08-31. It covers the implemented capture,
 retry-spool primitives, Typed Memory and Project Summary contracts, project
 mapping, bounded segmented processing, conflicts, candidates,
 Manifest/checkpoint `0.2`, recoverable publication, scoped interaction profiles,
 deterministic guidance, explicit bounded Recall, private disposable indexes,
 AgentCairn adapters, configuration, one-shot runtime, attention, isolated
-restart loop, and negative safety surfaces. It is not a deployed provider
-health check or Phase 1 acceptance.
+restart loop, Owner-review/recovery commands, encrypted backup boundaries, and
+negative safety surfaces. It is not a deployed provider health check, a real
+GPG backup, an exact-revision lifecycle canary, or a Phase 1 acceptance.
 The accepted [Test Strategy](../07-quality/test-strategy.md) owns suite coverage.
 
 ## Routine operations
 
-Use `orca rebuild`, `orca status`, and `orca recall <question>` only after valid
-configuration and authorized private deployment. `orca queue-pointer` provides
-the bounded PreCompact/explicit-save handoff. SessionEnd redacted spool handoff,
-one-shot handling, and catch-up are library interfaces for the local hook
-adapter. Conflict/candidate resolution still uses its owning explicit workflow.
+Use `orca rebuild`, `orca status`, and `orca recall <question>` after the
+[Deployment Guide](deployment.md) passes. `orca queue-pointer` provides
+the bounded PreCompact/explicit-save handoff. SessionEnd redacted spool handoff
+and one-shot handling run through the local hook adapter. A worker invocation
+drains up to 20 queued items by default. A transient failure retries after one
+and two seconds, up to three attempts by default; a terminal failure is retained
+while later independent work continues. `worker: pending` means queued work
+remains because the limit was reached, lifecycle was disabled, or a retry cycle
+could not complete. Pending units appear as content-free `pending-work` items in
+`orca status`. Run bounded catch-up
+explicitly with `uv run orca catch-up --reasoning-effort xhigh --max-sources 20`;
+Orca installs no timer or OS scheduler. Catch-up reads metadata first, queues
+only mapped Project or explicitly confirmed General histories, skips Unassigned
+histories without provider access, and remembers the last durably handed-off
+byte so later runs read only new complete records. An existing history may need
+one initial scan before its cursor exists. Each source is contained inside the
+configured rollout store before metadata access. A malformed or unsafe source
+creates a content-free `source-discovery` item while catch-up continues to later
+histories. Conflict/candidate resolution still uses its owning explicit
+workflow.
+
+## Owner review workflows
+
+These commands are explicit Owner decisions. They make no semantic-provider
+call and never write Canonical Memory:
+
+```bash
+uv run orca candidate approve <candidate_id>
+uv run orca candidate reject <candidate_id>
+
+uv run orca conflict select <memory_id> --variant <variant_id>
+uv run orca conflict acknowledge <memory_id>
+uv run orca conflict resolve <memory_id> \
+  --resolution-file <absolute-private-file> \
+  --resolution-at <UTC-timestamp>
+```
+
+Candidate disposition requires the current status to be `pending`. Conflict
+selection accepts an active or overflow variant; `acknowledge` keeps the
+conflict unresolved; `resolve` reads an Owner-supplied private file. Each
+operation writes one content-minimized receipt under the vault's
+`System/Orca Memory/provenance/owner-reviews/` directory and keeps its fixed
+post-images in a private local intent until verification. Status reports a
+pending review or recovery item with a safe ID; it does not perform the
+decision.
+
+If a command is interrupted, recover only the safe operation ID:
+
+```bash
+uv run orca recovery owner-review <operation-id>
+```
+
+A path, identity, receipt, or before/after hash mismatch fails closed. Do not
+edit the receipt, candidate, conflict record, or intent by hand; preserve it
+for Owner repair.
 
 The intended flow remains in [Runtime Architecture](../02-architecture/runtime.md).
 Its design description must not be executed as if it were a current command.
@@ -222,36 +318,80 @@ or retry material as a substitute for diagnostics.
 
 ## Backup
 
-**Unavailable:** No Orca-specific backup procedure has been implemented or
-verified. The checkout, configured vault, agent-owned source, and local runtime
-state have different authority and recovery roles and must not be copied as one
+**Operator command available; real private-vault execution not yet verified.**
+The checkout, configured vault, agent-owned source, and local runtime state have
+different authority and recovery roles and must not be copied as one
 undifferentiated backup.
 
-No backup or synchronization command is currently supported. [Data
-Architecture](../02-architecture/data-architecture.md) owns the classification
-and recovery boundaries that a future procedure must preserve.
+Before creating a backup:
+
+- set the exact vault `lifecycle.enabled` value to `false`;
+- settle all queue, retry-spool, publication, project-mapping, and Owner-review
+  intents; and
+- choose an absolute new output path outside both the vault and runtime, plus an
+  explicit local GPG recipient.
+
+Create the encrypted archive with:
+
+```bash
+uv run orca backup create \
+  --recipient <gpg-recipient> \
+  --output <absolute-private-backup-path>
+```
+
+The archive contains the full configured vault and only validated,
+content-minimized runtime `source-cursors/` and `scope-choices/` JSON. It
+excludes raw Codex rollouts, host configuration, credentials, queues, retry material, checkpoints,
+indexes, locks, and other disposable runtime state. The command never
+overwrites an existing output. The backup is encrypted by the locally
+installed `gpg`; no recipient or key material is stored by Orca.
+
+Verify an archive before relying on it:
+
+```bash
+uv run orca backup verify --source <absolute-private-backup-path>
+```
+
+Verification requires a private regular backup file, decrypts it into a private
+temporary workspace, and checks the archive manifest, allowed paths, file types,
+and every member hash. A real GPG backup and verification remain an operator
+step for the configured deployment, not a claim of this repository check.
 
 ## Restore
 
-**Unavailable:** No Orca-specific restore procedure has been implemented or
-verified. Do not restore checkpoints, indexes, Manifests, or memory artifacts by
-guessing from filenames or modification times.
+**Staging only; never a live overwrite.** First verify the backup, then expose
+its checked contents in a new private staging directory outside the live vault
+and runtime:
+
+```bash
+uv run orca backup stage \
+  --source <absolute-private-backup-path> \
+  --destination <absolute-new-staging-path>
+```
+
+The destination must not already exist. Decryption and hash checks complete
+before staging is published. The command reports `live_state_changed: false`;
+it does not restore or merge any file into the configured vault, runtime,
+configuration, credentials, or Codex source. Any later migration from staging
+is a separate Owner-authorized procedure and is not defined in Phase 1.
 
 ## Recovery
 
-No operator recovery command exists. The following are tested or designed
-boundaries, not executable procedures:
+Recovery commands are available for one safe operation ID. They never choose a
+new outcome or make a semantic-provider call. The following boundaries and
+commands apply:
 
 | Condition | Current evidence | Safe boundary |
 |---|---|---|
 | Exact replay after checkpoint loss | **Tested library behavior** | Durable Manifest scan prevents a second semantic result and repairs the checkpoint with the exact Manifest locator |
 | Failure before checkpoint publication | **Tested library behavior** | Leave progress unchanged so a later retry can recover |
-| Interrupted `0.2` publication | **Tested library behavior; operator procedure unavailable** | A valid fixed publication intent completes without another semantic call; mismatch requires human repair |
+| Interrupted `0.2` publication | **Tested library behavior; operator command available** | Run `orca recovery publication <operation-id>`; a valid fixed publication intent completes without another semantic call, while mismatch requires human repair |
 | Partial trailing JSONL | **Tested library behavior** | Complete preceding records proceed while the incomplete tail remains deferred at the last complete byte position |
 | Invalid or credential-bearing generated output | **Tested library behavior for output secrets** | Publish no affected output and leave progress retryable |
 | Missing or stale retrieval index | **Verified isolated procedure** | Run `orca rebuild`; it rebuilds only from governed permitted source roots and leaves Markdown unchanged |
-| Retry-spool failure or expiry | **Tested library behavior; operator procedure unavailable** | Private redacted creation, three attempts, 72-hour expiry, content-free receipt, and success cleanup are tested; no lifecycle hook invokes them yet |
-| Interrupted project registration or relink | **Tested library behavior; operator procedure unavailable** | Preserve the Project Mapping Intent; matching partial state completes, while mismatch requires Owner repair |
+| Retry-spool failure or expiry | **Implemented lifecycle behavior; manual repair unavailable** | SessionEnd creates only permitted redacted retry material, the one-shot worker applies three attempts and 72-hour expiry, and success removes the spool |
+| Interrupted project registration or relink | **Tested library behavior; operator command available** | Run `orca recovery project-mapping <operation-id>` with the same host configuration; matching partial state completes, while mismatch requires Owner repair |
+| Interrupted Owner candidate/conflict review | **Tested library behavior; operator command available** | Run `orca recovery owner-review <operation-id>`; the fixed receipt and post-images complete without a semantic call, while mismatch requires Owner repair |
 
 Do not manually edit immutable Manifests or advance checkpoints to force
 recovery. Record the failure and escalate until the owning implementation and
@@ -259,17 +399,16 @@ procedure exist.
 
 ## Human attention
 
-Run `uv run orca --registered-adapter <configured-adapter-id> status`. The view
+Run `uv run orca status`. The view
 shows content-free counts, safe IDs, severity, and owning-workflow routes. It
 does not resolve source state, recall memory, or make a model call.
 
-Until that interface exists, do not claim that pending candidates, Unassigned
-records, conflicts, stale blocking state, or repair items are reliably surfaced.
-Use the owning accepted documents and preserve observed failure evidence.
+Resolve every item only through its reported owning workflow. Status itself
+never repairs or changes source state.
 
 ## Rebuild derived data
 
-Run `uv run orca --registered-adapter <configured-adapter-id> rebuild` to rebuild
+Run `uv run orca rebuild` to rebuild
 interaction profiles, the private retrieval index, and Orca Status from their
 governed sources. A mismatch fails closed without broad Recall fallback.
 
@@ -281,23 +420,24 @@ governed sources. A mismatch fails closed without broad Recall fallback.
 | Example configuration is still unchanged | Placeholder adapter, model, or paths are not deployable | Supply authorized ignored/local values; do not commit them |
 | A Codex source item has an unknown shape | Expected fail-closed connector behavior | Preserve the source and update only after the supported adapter contract is verified |
 | Recall reports missing or stale index | Derived state needs reconciliation | Run `orca rebuild`; do not scan or edit vault Markdown as a workaround |
-| Project setup or relink is unavailable | Accepted implementation gap | Do not hand-edit `project.md` and `config/host.yaml` as a substitute |
+| A project root is Unassigned | No exact approved mapping exists | Run `orca project register` for a new project or Owner-confirmed `orca project relink` for an existing identity; do not hand-edit `project.md` and `config/host.yaml` |
+| Orca Status reports `pending-work` | One queued unit has not reached a terminal outcome | If lifecycle is intentionally off, leave it pending; otherwise run the owning worker path and preserve any reported failure receipt |
+| Orca Status reports `source-discovery` | Catch-up rejected one malformed or out-of-store source without retaining its path or content | Inspect the configured rollout store through the owning Codex workflow; a later valid scan clears the matching receipt |
 | Orca Status reports an integrity item | An owning source cannot be safely resolved | Use the reported owning workflow; Status itself never repairs state |
 | A regression test fails | Current code no longer matches the exercised baseline | Preserve output and diagnose before making a current verification claim |
 
 ## Known limitations
 
 - Phase 1 is accepted for the configured local runtime. The lifecycle toggle is
-  currently enabled and remains the Owner's immediate stop control.
-- The CLI and isolated local loop are verified with synthetic data. One
+  normally disabled; release requires a bounded exact-revision lifecycle canary.
+- The CLI and isolated local loop are verified with synthetic data. An earlier
   authorized, redacted two-turn private provider/candidate canary passed; it did
-  not establish broad routine usefulness.
-- The Owner enabled automatic handling and the bounded lifecycle canary passed
-  SessionStart, PreCompact, processing, SessionEnd deduplication, and detached
-  replay. This task's sandbox blocked nested Codex state-database writes; the
-  provider worker and replay required normal local Codex state access.
-- Automatic future-session handling is currently enabled. Set the exact boolean
-  back to `false` to stop it before transcript access.
+  not establish broad routine usefulness or verify this exact revision.
+- Automatic future-session handling is normally disabled. Keep the exact
+  boolean `false` except during the authorized bounded lifecycle canary.
+- The encrypted backup and staging restore paths are covered at the fake-GPG
+  boundary. A real GPG backup and verification of the configured private vault
+  have not run in this reconciliation.
 - The configured rebuild and explicit Recall procedures passed after the
   enabled canary. Recall correctly returned no candidate content because
   Knowledge Candidates are excluded from retrieval projections.
@@ -310,8 +450,8 @@ governed sources. A mismatch fails closed without broad Recall fallback.
 
 Stop and request Owner direction when:
 
-- a procedure would require a personal vault, private rollout, credential,
-  ignored runtime state, or external provider access;
+- a procedure would require a different private sample, vault, provider,
+  credential mechanism, or lifecycle scope than the accepted deployment;
 - recovery would require deletion, checkpoint manipulation, Manifest rewriting,
   or an unverified rebuild;
 - observed behavior differs from [Current Status](../STATUS.md) or an accepted
@@ -323,6 +463,7 @@ Stop and request Owner direction when:
 ## Related documents
 
 - **Documentation map:** [Documentation Index](../README.md)
+- **Installation and activation:** [Phase 1 Local Deployment Guide](deployment.md)
 - **Current implementation state:** [Current Status](../STATUS.md)
 - **Runtime behavior:** [Runtime Architecture](../02-architecture/runtime.md)
 - **Deployment boundary:** [Deployment Architecture](../02-architecture/deployment.md)

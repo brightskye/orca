@@ -13,12 +13,54 @@ from orca_memory.attention import (
 from orca_memory.candidates import KnowledgeCandidate
 from orca_memory.memory import MemoryRecord, record_relative_path, render_record
 from orca_memory.retrieval import discover_projection_sources, rebuild_projection_index
+from orca_memory.runtime import LocalRuntime
 
 
 NOW = "2026-08-30T10:00:00Z"
 
 
 class AttentionTests(unittest.TestCase):
+    def test_discovery_failure_is_visible_without_source_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime_root = root / "runtime"
+            source = root / "private-rollout-name.jsonl"
+            failure_id = LocalRuntime(runtime_root).record_discovery_failure(source)
+
+            status = collect_attention(root / "vault", runtime_root)
+
+            failures = [
+                entry for entry in status.items if entry.item_class == "source-discovery"
+            ]
+            self.assertEqual(len(failures), 1)
+            self.assertEqual(failures[0].locator, failure_id)
+            self.assertEqual(failures[0].workflow, "runtime-catch-up")
+            self.assertNotIn(str(source), status.render())
+
+    def test_pending_runtime_work_is_visible_without_source_content(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime_root = root / "runtime"
+            source = root / "private-rollout.jsonl"
+            runtime = LocalRuntime(runtime_root)
+            item = runtime.enqueue_pointer(
+                trigger="pre-compact",
+                connector_id="codex-local",
+                conversation_id="conversation-attention",
+                source_path=source,
+                start_offset=0,
+                scope_kind="unassigned",
+                scope_id="unassigned",
+            )
+
+            status = collect_attention(root / "vault", runtime_root)
+
+            pending = [entry for entry in status.items if entry.item_class == "pending-work"]
+            self.assertEqual(len(pending), 1)
+            self.assertEqual(pending[0].locator, item.work_id)
+            self.assertEqual(pending[0].workflow, "runtime-worker")
+            self.assertNotIn(str(source), status.render())
+
     def test_collects_pending_candidate_and_unassigned_without_content(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -135,13 +177,23 @@ class AttentionTests(unittest.TestCase):
             intent = root / "runtime/publications/run-safe/intent.json"
             intent.parent.mkdir(parents=True)
             intent.write_text("{}", encoding="utf-8")
+            owner_intent = root / "runtime/owner-reviews/review-safe/intent.json"
+            owner_intent.parent.mkdir(parents=True)
+            owner_intent.write_text("{}", encoding="utf-8")
+            orphan = root / "runtime/owner-reviews/review-orphan/output-1.post"
+            orphan.parent.mkdir(parents=True)
+            orphan.write_text("private staged content", encoding="utf-8")
             status = collect_attention(root / "vault", root / "runtime")
             rendered = status.render()
-            self.assertEqual(len(status.items), 3)
+            self.assertEqual(len(status.items), 5)
             self.assertIn("run-safe", rendered)
+            self.assertIn("review-safe", rendered)
+            self.assertIn("owner-review-recovery", rendered)
+            self.assertIn("review-orphan", rendered)
             self.assertIn("retrieval-index", rendered)
             self.assertNotIn("private-title", rendered)
             self.assertNotIn("private body", rendered)
+            self.assertNotIn("private staged content", rendered)
 
 
 if __name__ == "__main__":

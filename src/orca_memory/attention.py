@@ -15,6 +15,7 @@ from orca_memory.candidates import KnowledgeCandidate
 from orca_memory.conflicts import parse_conflict_record
 from orca_memory.memory import parse_record
 from orca_memory.retrieval import RetrievalUnavailable, load_projection_index
+from orca_memory.runtime import LocalRuntime
 
 
 STATUS_SCHEMA = "orca-status/0.1"
@@ -161,8 +162,50 @@ def collect_attention(
                 items.append(_integrity_item(vault_root, path))
     items.extend(_intent_items(runtime_root / "publications", "publication-recovery"))
     items.extend(_intent_items(runtime_root / "project-mappings", "project-mapping-recovery"))
+    items.extend(_intent_items(runtime_root / "owner-reviews", "owner-review-recovery"))
+    try:
+        pending_work = LocalRuntime(runtime_root).pending()
+    except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+        items.append(_integrity_item(runtime_root, runtime_root / "queue"))
+    else:
+        for work in pending_work:
+            items.append(
+                AttentionItem(
+                    "pending-work",
+                    "action-required",
+                    "runtime-worker",
+                    work.work_id,
+                    "1970-01-01T00:00:00Z",
+                    "1970-01-01T00:00:00Z",
+                )
+            )
     receipt_root = runtime_root / "receipts"
     if receipt_root.exists():
+        for path in sorted(receipt_root.glob("discovery-*.json")):
+            try:
+                value = json.loads(path.read_text(encoding="utf-8"))
+                if (
+                    not isinstance(value, dict)
+                    or set(value) != {"schema", "failure_id", "reason"}
+                    or value.get("schema")
+                    != "orca-runtime-discovery-failure/0.1"
+                    or not isinstance(value.get("failure_id"), str)
+                    or not _SAFE_RECEIPT_ID.fullmatch(value["failure_id"])
+                    or value.get("reason") != "invalid-source"
+                ):
+                    raise ValueError("invalid discovery failure receipt")
+                items.append(
+                    AttentionItem(
+                        "source-discovery",
+                        "action-required",
+                        "runtime-catch-up",
+                        value["failure_id"],
+                        "1970-01-01T00:00:00Z",
+                        "1970-01-01T00:00:00Z",
+                    )
+                )
+            except (OSError, UnicodeError, ValueError, json.JSONDecodeError):
+                items.append(_integrity_item(runtime_root, path))
         for path in sorted(receipt_root.glob("failure-*.json")):
             try:
                 value = json.loads(path.read_text(encoding="utf-8"))
@@ -265,8 +308,8 @@ def _intent_items(root: Path, workflow: str) -> tuple[AttentionItem, ...]:
     if not root.exists():
         return ()
     items = []
-    for path in sorted(root.glob("*/intent.json")):
-        locator = path.parent.name
+    for run_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+        locator = run_dir.name
         timestamp = "1970-01-01T00:00:00Z"
         items.append(
             AttentionItem(

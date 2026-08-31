@@ -40,7 +40,7 @@ the artifact schemas selected by configuration.
 | `ORCA_VAULT_PATH` | Optional alternate source for the vault path only | Local process environment |
 | `System/Orca Memory/orca-memory.yaml` | Phase 1 policies, cadence, provider selection, privacy and interaction policy versions, and budgets | Configured private vault |
 | Project `project.md` records | Permanent `project_id` and current unique Project Alias | Configured private vault; collectively the Project Registry |
-| Local runtime state | Rebuildable mappings, indexes, locks, queues, checkpoints, retry material, and receipts | Outside vault and Git; never configuration authority for memory semantics |
+| Local runtime state | Rebuildable mappings, indexes, locks, queues, checkpoints, retry material, receipts, and content-free conversation-scope choices | Outside vault and Git; never authority for semantic content |
 
 Tracked source MUST contain only a safe example. Actual host values,
 credentials, private memory, and generated runtime state MUST NOT be copied into
@@ -104,12 +104,17 @@ Adapter obtains them through its separately authorized local mechanism.
 
 `lifecycle.enabled: false` makes every installed Codex lifecycle hook a no-op
 after configuration validation and before transcript access, capture,
-redaction, queueing, guidance loading, or provider invocation. When it is
-`true`, automatic handling remains subject to the accepted eligibility and
-Secret Containment rules: permitted content is locally redacted before any
-retry spool or provider handoff, and a redaction failure sends nothing. There
-is no configuration mode that permits unredacted provider input. Explicit
-operator CLI commands are outside this automatic-lifecycle toggle.
+redaction, queueing, guidance loading, or provider invocation. Catch-up also
+returns before rollout discovery. An automatic worker reloads this setting
+before starting each queued unit and leaves that unit pending without
+incrementing its attempt count when handling is disabled. The setting cannot
+cancel a provider request that was already started before it changed.
+
+When the setting is `true`, automatic handling remains subject to the accepted
+eligibility and Secret Containment rules: permitted content is locally redacted
+before any retry spool or provider handoff, and a redaction failure sends
+nothing. There is no configuration mode that permits unredacted provider input.
+Explicit operator CLI commands are outside this automatic-lifecycle toggle.
 
 The `budgets` mapping exposes three groups whose exact defaults and behavioral
 meanings have one owner:
@@ -170,6 +175,14 @@ ID and publish the fixed `orca-project/0.1` record before atomically adding the
 mapping. Relinking adds only the confirmed mapping and does not rewrite
 `project.md`. An old missing mapping is not removed automatically.
 
+For automatic Codex lifecycle handling, Governance normalizes the hook working
+directory to its Git top level, or uses the exact selected directory when it is
+not a Git workspace, and applies this resolver before queueing. An exact valid
+Project Root Mapping selects Project scope. If no project is proven, an explicit
+content-free Owner choice for that conversation may select General; without
+that choice the conversation remains Unassigned. A Project mapping takes
+precedence over a General choice, and no model may choose or infer scope.
+
 Before either final file changes, the workflow writes one private
 `orca-project-mapping-intent/0.1` at
 `.runtime/project-mappings/<operation-id>/intent.json` under one local mapping
@@ -214,6 +227,9 @@ raw credential values in diagnostics, or memory authority derived from paths.
 9. Automatic lifecycle handling MUST default off. A missing or non-boolean
    lifecycle value MUST never enable it, and enabled handling MUST retain local
    redaction as a mandatory, non-configurable precondition to provider input.
+10. Automatic lifecycle scope resolution MUST select Project only from valid
+    local mapping evidence, General only from an explicit Owner conversation
+    choice, and Unassigned for every unresolved case.
 
 ## Validation invariants
 

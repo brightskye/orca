@@ -156,19 +156,22 @@ See [Security and Trust](security-and-trust.md).
 
 The intended Phase 1 deployment is local: Codex Desktop invokes a WSL runtime
 that reads its supported local source and uses a configured vault. No public
-service is exposed. The runtime is not yet deployed for routine use.
+service is exposed. The project lifecycle hooks are installed, the Owner
+enabled them, and the bounded local lifecycle canary passed. The vault toggle
+remains the immediate stop control.
 
 Phases 2 and 3 are candidate directions only. See [Deployment
 Architecture](deployment.md) and the [Roadmap](../ROADMAP.md).
 
 ## Known limitations
 
-- Current code implements only the initial Owner-turn,
-  Continuation-Summary/Manifest/checkpoint slice.
-- Assistant context, complete typed memory, candidates, interaction behavior,
-  recall, lifecycle wiring, configuration, and deployment remain incomplete.
-- Ordinary Knowledge Candidate behavior has an accepted specification; its
-  schema and lifecycle remain unimplemented.
+- Canonical automatic apply remains disabled and unexposed.
+- Codex's rollout format is not a stable public contract; unsupported format
+  changes fail closed pending isolated verification.
+- The local CLI has no general diagnostics, backup, restore, or manual
+  publication-repair command.
+- Scheduling the supported periodic catch-up command is an external operator
+  concern; Orca installs no daemon or OS scheduler.
 - Superseded architecture sources are preserved under `docs/_archive/` and do
   not define current behavior.
 

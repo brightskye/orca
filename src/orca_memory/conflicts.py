@@ -22,7 +22,8 @@ from orca_memory.memory import (
 from orca_memory.privacy import contains_secret
 
 
-CONFLICT_OVERFLOW_SCHEMA = "orca-conflict-overflow/0.1"
+CONFLICT_OVERFLOW_SCHEMA = "orca-conflict-overflow/0.2"
+LEGACY_CONFLICT_OVERFLOW_SCHEMA = "orca-conflict-overflow/0.1"
 _VARIANT_ID = re.compile(r"^v([1-9][0-9]*)$")
 _SAFE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
 
@@ -378,6 +379,7 @@ def review_conflict(
     owner_resolution: str | None = None,
     resolution_at: str | None = None,
     keep_unresolved: bool = False,
+    overflow_variants: tuple["ConflictOverflow", ...] = (),
 ) -> MemoryRecord | ConflictRecord:
     """Apply exactly one explicit Owner conflict-review outcome."""
 
@@ -402,8 +404,23 @@ def review_conflict(
                 ),
             }
         )
+    overflow_as_variants: tuple[ConflictVariant, ...] = tuple(
+        ConflictVariant(item.variant_id, item.label, item.position, item.position_at)
+        for item in overflow_variants
+    )
+    for overflow in overflow_variants:
+        if (
+            overflow.memory_id != existing.memory_id
+            or overflow.subject != existing.subject
+            or overflow.scope != existing.scope
+            or overflow.scope_id != existing.scope_id
+        ):
+            raise MemoryValidationError("conflict overflow changes target identity or scope")
+    all_variants = existing.variants + overflow_as_variants
+    if len({item.variant_id for item in all_variants}) != len(all_variants):
+        raise MemoryValidationError("duplicate conflict review variant identity")
     selected = next(
-        (item for item in existing.variants if item.variant_id == select_variant_id),
+        (item for item in all_variants if item.variant_id == select_variant_id),
         None,
     )
     if select_variant_id is not None and selected is None:
@@ -419,7 +436,7 @@ def review_conflict(
         f"`{variant.variant_id}` — {variant.label} — "
         f"{'replaced by Owner resolution' if owner_resolution is not None else 'selected' if variant is selected else 'not selected'} — "
         f"{variant.position_at or 'unknown'}"
-        for variant in existing.variants
+        for variant in all_variants
     )
     return MemoryRecord(
         memory_id=existing.memory_id,
@@ -505,6 +522,26 @@ class ConflictOverflow:
     label: str
     position: str
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.memory_id, str) or _SAFE_ID.fullmatch(self.memory_id) is None:
+            raise MemoryValidationError("invalid conflict overflow memory_id")
+        match = _VARIANT_ID.fullmatch(self.variant_id)
+        if match is None or int(match.group(1)) < 4:
+            raise MemoryValidationError("conflict overflow variant_id must be v4 or later")
+        semantic_slug(self.subject)
+        if self.scope not in {"project", "general", "unassigned"}:
+            raise MemoryValidationError("invalid conflict overflow scope")
+        if self.scope == "project":
+            if not _SAFE_ID.fullmatch(self.scope_id):
+                raise MemoryValidationError("invalid conflict overflow project scope")
+        elif self.scope_id != self.scope:
+            raise MemoryValidationError("conflict overflow scope identity mismatch")
+        object.__setattr__(self, "position_at", _timestamp(self.position_at, "position_at"))
+        object.__setattr__(self, "created_at", _timestamp(self.created_at, "created_at"))
+        object.__setattr__(self, "updated_at", _timestamp(self.updated_at, "updated_at"))
+        object.__setattr__(self, "label", _label(self.label))
+        object.__setattr__(self, "position", _position(self.position))
+
     @classmethod
     def from_variant(
         cls, record: ConflictRecord, variant: ConflictVariant, *, created_at: str
@@ -534,12 +571,61 @@ class ConflictOverflow:
             ("position_at", self.position_at),
             ("created_at", self.created_at),
             ("updated_at", self.updated_at),
+            ("label", self.label),
         )
         lines = ["---"]
         for key, value in values:
             lines.append(f"{key}: {'null' if value is None else value}")
         lines.extend(("---", "", f"# {self.subject} — {self.variant_id}", "", "## Position", "", self.position, ""))
         return "\n".join(lines)
+
+    @classmethod
+    def parse(cls, document: str) -> "ConflictOverflow":
+        if not document.startswith("---\n") or "\n---\n" not in document[4:]:
+            raise MemoryValidationError("conflict overflow requires frontmatter")
+        marker = document.find("\n---\n", 4)
+        metadata = yaml.safe_load(document[4:marker])
+        common = {
+            "schema",
+            "memory_id",
+            "variant_id",
+            "subject",
+            "authority",
+            "scope",
+            "scope_id",
+            "position_at",
+            "created_at",
+            "updated_at",
+        }
+        schema = metadata.get("schema") if isinstance(metadata, dict) else None
+        expected = common | ({"label"} if schema == CONFLICT_OVERFLOW_SCHEMA else set())
+        if (
+            not isinstance(metadata, dict)
+            or set(metadata) != expected
+            or schema not in {CONFLICT_OVERFLOW_SCHEMA, LEGACY_CONFLICT_OVERFLOW_SCHEMA}
+            or metadata["authority"] != "noncanonical"
+        ):
+            raise MemoryValidationError("invalid conflict overflow frontmatter")
+        for key in ("position_at", "created_at", "updated_at"):
+            if isinstance(metadata[key], datetime):
+                metadata[key] = metadata[key].isoformat().replace("+00:00", "Z")
+        body = document[marker + 5 :].strip()
+        prefix = f"# {metadata['subject']} — {metadata['variant_id']}\n\n## Position\n\n"
+        if not body.startswith(prefix):
+            raise MemoryValidationError("invalid conflict overflow body")
+        position = body[len(prefix) :]
+        return cls(
+            memory_id=metadata["memory_id"],
+            variant_id=metadata["variant_id"],
+            subject=metadata["subject"],
+            scope=metadata["scope"],
+            scope_id=metadata["scope_id"],
+            position_at=metadata["position_at"],
+            created_at=metadata["created_at"],
+            updated_at=metadata["updated_at"],
+            label=metadata.get("label", f"Overflow {metadata['variant_id']}"),
+            position=position,
+        )
 
     def relative_path(self, project_alias: str | None = None) -> Path:
         scope = scope_directory(self.scope, project_alias).relative_to(
@@ -563,6 +649,7 @@ def _matching_target(existing: MemoryRecord | ConflictRecord, proposal: Conflict
 
 __all__ = [
     "CONFLICT_OVERFLOW_SCHEMA",
+    "LEGACY_CONFLICT_OVERFLOW_SCHEMA",
     "ConflictOverflow",
     "ConflictProposal",
     "ConflictRecord",

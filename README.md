@@ -2,7 +2,7 @@
 type: Project
 title: Orca Agent Memory System
 status: active
-updated: 2026-08-30
+updated: 2026-08-31
 tags:
   - project
   - orca
@@ -53,11 +53,16 @@ and [Integration Architecture](docs/02-architecture/integration-architecture.md)
 
 ## Use and installation
 
-There is no supported Phase 1 runtime installation, start, health, recall,
-rebuild, or recovery command yet. The [Local
-Runbook](docs/08-operations/runbook.md) records the one verified repository
-regression procedure and explicitly labels unavailable operator interfaces.
-Do not treat tests or documented design as deployed health.
+Follow the [Phase 1 Local Deployment
+Guide](docs/08-operations/deployment.md) for the authoritative installation,
+configuration, lifecycle activation, and first-canary procedure. After
+deployment, use the [Local Runbook](docs/08-operations/runbook.md) for health,
+status, Recall, rebuild, disablement, troubleshooting, and recovery boundaries.
+
+The Phase 1 runtime uses local one-shot workers rather than a daemon. Automatic
+Codex lifecycle handling is controlled by the vault's `lifecycle.enabled`
+boolean and always applies local eligibility filtering and Secret Containment
+before provider input. Canonical automatic apply remains unavailable.
 
 ## Where things live
 

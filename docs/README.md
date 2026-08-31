@@ -9,7 +9,7 @@ applies_to:
   - all-phases
 owners:
   - project-owner
-last_reviewed: 2026-08-30
+last_reviewed: 2026-08-31
 documentation_standard: PDS-0.2
 documentation_profile: core
 ---
@@ -73,6 +73,7 @@ project documentation.
 | Current implementation sequence and milestone progress | [Plan Registry](06-plans/README.md) |
 | Phase 1 acceptance scenarios and phase gate | [Acceptance Plan](07-quality/acceptance.md) |
 | Test levels, suites, fixtures, and evaluation boundaries | [Test Strategy](07-quality/test-strategy.md) |
+| Local installation, configuration, activation, and first verification | [Phase 1 Local Deployment Guide](08-operations/deployment.md) |
 | Vulnerability reporting | Root [Security Policy](../SECURITY.md) |
 | PDS rules for this repository | Root [PDS v0.2](../PDS.md) |
 
@@ -97,7 +98,8 @@ in the registry above → [Phase 1 Implementation Plan](06-plans/completed/phase
 
 ### Investigate a runtime failure
 
-[Current Status](STATUS.md) → [Local Runbook](08-operations/runbook.md) →
+[Current Status](STATUS.md) → [Local Deployment Guide](08-operations/deployment.md) →
+[Local Runbook](08-operations/runbook.md) →
 [Provenance Ledger](03-specifications/provenance-ledger.md) → relevant code and tests
 
 ### Verify Phase 1 behavior or completion
@@ -165,6 +167,7 @@ specifications.
 | [Phase 1 Implementation Plan](06-plans/completed/phase-1-implementation.md) | Completed Phase 1 sequence and exit criteria | Informative |
 | [Acceptance Plan](07-quality/acceptance.md) | Accepted Phase 1 scenarios and gate | Normative |
 | [Test Strategy](07-quality/test-strategy.md) | Accepted test/evaluation mechanics and suite ownership | Normative |
+| [Phase 1 Local Deployment Guide](08-operations/deployment.md) | Accepted local installation, activation, and first-verification procedure | Normative |
 | [Phase 1 Local Runbook](08-operations/runbook.md) | Accepted truthful local procedures and explicit operational gaps | Normative |
 | [Memory System Contract](governance/memory-system-contract.md) | Governance contract | Normative |
 

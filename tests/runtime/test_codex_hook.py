@@ -18,11 +18,18 @@ from orca_memory.application import StartupContext
 from orca_memory.codex_hook import handle_payload, main
 from orca_memory.configuration import load_configuration
 from orca_memory.conversation import normalize_codex_rollout
+from orca_memory.projects import ProjectRecord
 from orca_memory.provenance import segmented_source
+from orca_memory.runtime import LocalRuntime
 from orca_memory.segmentation import segment_turn_with_budget
 
 
-def _configuration(root: Path, *, lifecycle_enabled: bool = True) -> Path:
+def _configuration(
+    root: Path,
+    *,
+    lifecycle_enabled: bool = True,
+    mapped_root: Path | None = None,
+) -> Path:
     vault = root / "vault"
     runtime = root / "runtime"
     rollouts = root / "rollouts"
@@ -39,7 +46,11 @@ def _configuration(root: Path, *, lifecycle_enabled: bool = True) -> Path:
                 "vault_path": str(vault),
                 "runtime_path": str(runtime),
                 "connectors": {"codex": {"rollout_store": str(rollouts)}},
-                "project_root_mappings": [],
+                "project_root_mappings": (
+                    [{"root": str(mapped_root), "project_id": "proj_orca"}]
+                    if mapped_root is not None
+                    else []
+                ),
             },
             sort_keys=False,
         ),
@@ -65,6 +76,26 @@ def _configuration(root: Path, *, lifecycle_enabled: bool = True) -> Path:
         ),
         encoding="utf-8",
     )
+    if mapped_root is not None:
+        project_path = (
+            vault
+            / "System"
+            / "Orca Memory"
+            / "shallow"
+            / "projects"
+            / "orca"
+            / "project.md"
+        )
+        project_path.parent.mkdir(parents=True)
+        project_path.write_text(
+            ProjectRecord(
+                "proj_orca",
+                "Orca",
+                "2026-08-30T10:00:00Z",
+                "2026-08-30T10:00:00Z",
+            ).render(),
+            encoding="utf-8",
+        )
     load_configuration(
         host_path, environ={}, registered_provider_adapters={"codex-cli"}
     )
@@ -151,7 +182,7 @@ class CodexHookTests(unittest.TestCase):
         expected = {
             "SessionStart": ("startup|resume|compact", 10),
             "PreCompact": ("manual|auto", 10),
-            "SessionEnd": ("other", 3),
+            "SessionEnd": ("other", 10),
         }
         for event, (matcher, timeout) in expected.items():
             entry = configuration["hooks"][event][0]
@@ -221,6 +252,104 @@ class CodexHookTests(unittest.TestCase):
             self.assertEqual(work["trigger"], "pre-compact")
             self.assertEqual(work["source_kind"], "rollout-pointer")
             self.assertEqual(work["conversation_id"], "hook-session")
+            self.assertEqual(work["scope_kind"], "unassigned")
+            self.assertEqual(work["scope_id"], "unassigned")
+
+    def test_precompact_queues_only_bytes_after_durable_source_cursor(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_path = _configuration(root)
+            rollout = root / "rollouts" / "hook.jsonl"
+            _write_rollout(rollout)
+            first_record_end = len(rollout.read_bytes().splitlines(keepends=True)[0])
+            LocalRuntime(root / "runtime").advance_source_offset(
+                "codex-local",
+                "hook-session",
+                rollout,
+                first_record_end,
+            )
+
+            handle_payload(
+                _payload("PreCompact", rollout, root),
+                environ={"ORCA_HOST_CONFIG": str(host_path)},
+                spawn=lambda *args, **kwargs: object(),
+            )
+
+            work = json.loads(
+                next((root / "runtime" / "queue").glob("*.json")).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(work["start_offset"], first_record_end)
+
+    def test_mapped_working_directory_queues_project_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".git").mkdir()
+            host_path = _configuration(root, mapped_root=root)
+            rollout = root / "rollouts" / "hook.jsonl"
+            _write_rollout(rollout)
+
+            handle_payload(
+                _payload("PreCompact", rollout, root),
+                environ={"ORCA_HOST_CONFIG": str(host_path)},
+                spawn=lambda *args, **kwargs: object(),
+            )
+
+            work = json.loads(
+                next((root / "runtime" / "queue").glob("*.json")).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(work["scope_kind"], "project")
+            self.assertEqual(work["scope_id"], "proj_orca")
+            self.assertEqual(work["project_alias"], "Orca")
+
+    def test_explicit_general_choice_applies_only_when_project_is_unmapped(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_path = _configuration(root)
+            rollout = root / "rollouts" / "hook.jsonl"
+            _write_rollout(rollout)
+            LocalRuntime(root / "runtime").set_scope_choice("hook-session", "general")
+
+            handle_payload(
+                _payload("PreCompact", rollout, root),
+                environ={"ORCA_HOST_CONFIG": str(host_path)},
+                spawn=lambda *args, **kwargs: object(),
+            )
+
+            work = json.loads(
+                next((root / "runtime" / "queue").glob("*.json")).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(work["scope_kind"], "general")
+            self.assertEqual(work["scope_id"], "general")
+            self.assertIsNone(work["project_alias"])
+
+    def test_project_mapping_takes_precedence_over_general_choice(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / ".git").mkdir()
+            host_path = _configuration(root, mapped_root=root)
+            rollout = root / "rollouts" / "hook.jsonl"
+            _write_rollout(rollout)
+            LocalRuntime(root / "runtime").set_scope_choice("hook-session", "general")
+
+            handle_payload(
+                _payload("PreCompact", rollout, root),
+                environ={"ORCA_HOST_CONFIG": str(host_path)},
+                spawn=lambda *args, **kwargs: object(),
+            )
+
+            work = json.loads(
+                next((root / "runtime" / "queue").glob("*.json")).read_text(
+                    encoding="utf-8"
+                )
+            )
+            self.assertEqual(work["scope_kind"], "project")
+            self.assertEqual(work["scope_id"], "proj_orca")
 
     def test_session_end_spools_only_unprocessed_redacted_turns(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -265,6 +394,12 @@ class CodexHookTests(unittest.TestCase):
             self.assertIn("api_key=[REDACTED]", spool_text)
             self.assertNotIn("old-turn", spool_text)
             self.assertNotIn("secret-value", spool_text)
+            self.assertEqual(
+                LocalRuntime(root / "runtime").source_offset(
+                    "codex-local", "hook-session", rollout
+                ),
+                rollout.stat().st_size,
+            )
 
     def test_session_end_retains_turn_when_only_a_later_segment_is_unprocessed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

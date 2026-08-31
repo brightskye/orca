@@ -9,12 +9,15 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 supersedes: []
 manifest-schema: orca-run-manifest/0.2
 checkpoint-schema: orca-checkpoint/0.2
 publication-intent-schema: orca-publication-intent/0.1
+owner-review-intent-schema: orca-owner-review-intent/0.1
+candidate-disposition-schema: orca-knowledge-candidate-disposition/0.1
+conflict-review-receipt-schema: orca-conflict-review-receipt/0.1
 ---
 
 # Orca Provenance Ledger Specification
@@ -27,6 +30,8 @@ recovery interface for Phase 1.
 ## This document owns
 
 - Run Manifest, checkpoint, and local publication-intent schemas.
+- The boundary between content-minimized Owner-review receipts and their local
+  recoverable intents.
 - Processed-source identity and deduplication meaning.
 - Operation-to-source and operation-to-output audit joins.
 - Artifact/Manifest/checkpoint publication order and progress repair.
@@ -51,6 +56,13 @@ never synchronized and carries no memory authority.
 Publication intents are private local recovery records. They permit Storage to
 finish or reconcile an interrupted publication without another semantic call.
 They are neither memory authority nor durable audit authority.
+
+Owner-review intents are a separate private local recovery mechanism for
+explicit candidate and conflict decisions. They do not represent a semantic
+processing run and therefore do not invent source references or a Run Manifest.
+The corresponding content-minimized Owner-review receipt is durable vault
+provenance for the explicit decision; it contains identities, the selected
+outcome, timestamps, and before/after hashes, not proposal text or raw source.
 
 ## Run Manifest 0.2
 
@@ -371,6 +383,38 @@ Storage deletes the local intent only after the Manifest and checkpoint are
 durable and verified. Cleanup failure cannot repeat semantic work because the
 Manifest remains authoritative.
 
+### Owner-review publication and recovery
+
+The separate candidate and conflict review commands publish a fixed private
+Owner-review intent before changing a candidate or Typed Memory Record. The
+intent contains the receipt payload, target paths, and exact before/after
+hashes. Publication order is:
+
+1. validate the explicit Owner outcome and all target identities and paths;
+2. write the private intent and staged post-images;
+3. publish the immutable content-minimized Owner-review receipt;
+4. publish or delete the fixed target artifacts; and
+5. verify every post-image, then remove the intent and staged files.
+
+The receipt is stored under:
+
+```text
+System/Orca Memory/provenance/owner-reviews/<operation-id>.json
+```
+
+The private intent is stored under:
+
+```text
+.runtime/owner-reviews/<operation-id>/intent.json
+```
+
+Recovery uses `orca recovery owner-review <operation-id>`. It never makes a
+semantic call or chooses an outcome. A missing, malformed, or hash-mismatched
+intent or target fails closed and remains a content-free attention item for
+Owner repair. On conflict resolution, overflow-candidate deletion occurs only
+after the resolved record and receipt are committed; a leftover is not
+reviewable once the committed lineage proves the resolution.
+
 ## Compatibility and migration
 
 Existing `orca-run-manifest/0.1` files remain immutable valid historical
@@ -394,6 +438,8 @@ missing segment or operation meaning from `0.1` receipts.
   conversation text.
 - Publication intents and staged content remain private, local, and outside Git
   and the configured vault.
+- Owner-review intents and staged review post-images remain private and local;
+  Owner-review receipts contain no proposal or conversation text.
 - Recovery never bypasses output secret scanning, scope validation, or path
   validation.
 - A hash, path, identity, schema, or source-sequence mismatch fails closed.

@@ -20,7 +20,7 @@ record-schema: orca-memory/0.2
 status-policy: orca-memory-status/0.1
 variant-policy: orca-memory-variant/0.4
 review-policy: orca-memory-review/0.2
-overflow-policy: orca-conflict-overflow/0.1
+overflow-policy: orca-conflict-overflow/0.2
 body-policy: orca-memory-body/0.1
 project-schema: orca-project/0.1
 ---
@@ -328,8 +328,9 @@ authority, or scope.
 - Variant identity is not derived from wording, content hashes, source hashes,
   or timestamps because those may change without changing the alternative's
   meaning.
-- Run Manifests bind every variant creation, support, change, and resolution to
-  its stable identifier and exact sources.
+- Run Manifests bind every source-driven variant creation, support, and change
+  to its stable identifier and exact sources. Dedicated Owner-review receipts
+  bind explicit resolution dispositions without inventing a conversation source.
 - Every active variant displays a `position_at` Variant Position Timestamp in
   UTC RFC 3339 form. It comes from the actual trusted conversation turn that
   introduced or materially changed that distinct position, never from
@@ -419,10 +420,11 @@ Conflict Review permits exactly three Owner outcomes:
 Selecting a variant or supplying a resolution changes the record to `current`,
 places the resulting current meaning in the main body, clears pending review,
 and retains compact lineage identifying every prior variant and its disposition.
-The resolution turn and complete evidence remain in the Run Manifest. Full
-source histories, support lists, and repeated evidence are not copied into the
-living record. Keeping the conflict unresolved preserves its variants and review
-state as `acknowledged`; it does not synthesize a winner. That review-state-only
+The dedicated Owner-review receipt records the explicit outcome, every variant
+disposition, and the fixed output hashes. Full source histories, support lists,
+and repeated evidence are not copied into the living record. Keeping the
+conflict unresolved preserves its variants and review state as `acknowledged`;
+it does not synthesize a winner. That review-state-only
 change advances Storage `updated_at` but not semantic `source_updated_at`.
 
 ### Conflict body
@@ -466,9 +468,29 @@ new variant ID; its identity is the record's permanent `memory_id`.
 ```
 
 When the Owner supplies a new resolution, every prior variant disposition is
-`replaced by Owner resolution`. The resolving Owner turn establishes
-`source_updated_at`; the Run Manifest retains the exact resolution operation and
-complete evidence.
+`replaced by Owner resolution`. The explicit `--resolution-at` value supplies
+the trusted source timestamp for `source_updated_at`; the Owner-review receipt
+retains the exact operation, all variant dispositions, and output hashes.
+
+### Owner review operations
+
+Phase 1 exposes these outcomes only through explicit Owner commands. Candidate
+disposition uses `orca candidate approve <candidate_id>` or
+`orca candidate reject <candidate_id>`. Conflict review uses
+`orca conflict select <memory_id> --variant <variant_id>`,
+`orca conflict resolve <memory_id> --resolution-file <private-file> --resolution-at <UTC-timestamp>`, or
+`orca conflict acknowledge <memory_id>`. These are separate workflows; Status
+only reports the safe ID and owning route and never performs the decision.
+
+Each command creates one content-minimized Owner-review receipt under
+`System/Orca Memory/provenance/owner-reviews/` and a private local recoverable
+intent under `.runtime/owner-reviews/<operation-id>/`. The intent fixes the
+receipt, before/after hashes, and post-images. The receipt is published first,
+then the record is changed and any resolved overflow candidates are removed.
+An interrupted operation is resumed with
+`orca recovery owner-review <operation-id>`; a hash or identity mismatch fails
+closed and remains visible for Owner repair. Owner-review receipts are not
+Run Manifests and do not grant canonical authority.
 
 ## Conflict Overflow Candidate contract
 
@@ -478,7 +500,7 @@ separate candidate identity.
 
 ```yaml
 ---
-schema: orca-conflict-overflow/0.1
+schema: orca-conflict-overflow/0.2
 memory_id: mem_...
 variant_id: v4
 subject: Processed source index
@@ -488,6 +510,7 @@ scope_id: project_...
 position_at: 2026-08-28T09:30:00Z
 created_at: 2026-08-28T09:35:00Z
 updated_at: 2026-08-28T09:35:00Z
+label: Remote
 ---
 ```
 
@@ -516,6 +539,11 @@ its timestamps. A material change to the same position may update its distilled
 body and `position_at`; a genuinely different position receives the next stable
 variant ID and another candidate file. Privacy redaction and deterministic secret
 scanning run before every publication.
+
+New overflow candidates use `orca-conflict-overflow/0.2` and include a required
+safe one-line `label`. Readers remain compatible with immutable `0.1` candidates
+that have no label; they use the deterministic display label `Overflow vN`
+without rewriting the old file. New writes always use `0.2`.
 
 Conflict Overflow Candidates are excluded from Project and Workstream Summaries,
 Retrieval Projections, ordinary Recall, and automatic session context. Only the

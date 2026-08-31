@@ -9,8 +9,8 @@ applies_to:
   - phase-1
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 supersedes: []
 candidate-schema: orca-knowledge-candidate/0.1
 ---
@@ -68,7 +68,10 @@ silently generalized or linked to a project.
 
 Creation produces one pending candidate Markdown artifact and one Run Manifest
 binding its `candidate_id` to exact sources. Review produces a deterministic
-status update and a content-minimized disposition receipt. Neither output is
+status update and a content-minimized disposition receipt under
+`System/Orca Memory/provenance/owner-reviews/`. During review, a private local
+recoverable intent under `.runtime/owner-reviews/<operation-id>/` fixes the
+receipt, candidate before/after hashes, and post-image. Neither output is
 Canonical Memory or a canonical-write instruction.
 
 ## Data model
@@ -134,6 +137,24 @@ states. Reconsidered or corrected meaning requires a new candidate rather than
 silently rewriting the reviewed proposal. No semantic provider or automatic job
 may perform a disposition transition.
 
+### Owner disposition commands
+
+The Owner invokes exactly one terminal disposition through the separate local
+commands:
+
+```text
+orca candidate approve <candidate_id>
+orca candidate reject <candidate_id>
+```
+
+The command requires the candidate to still be `pending`, writes the fixed
+content-minimized receipt before the candidate post-image, and leaves the
+candidate `noncanonical`. If interrupted, use
+`orca recovery owner-review <operation-id>` with the safe operation ID reported
+by Status or the command result. A repeated request for an already applied
+disposition reuses its matching receipt; a different or stale state fails
+closed.
+
 ## Required behavior
 
 1. One candidate MUST contain one proposal of one controlled kind.
@@ -166,6 +187,9 @@ may perform a disposition transition.
 - Candidate content never becomes canonical by status change, filename, path,
   indexing, or model confidence.
 - Candidate review never silently changes Canonical Memory.
+- Disposition receipts contain only the candidate identity, terminal status,
+  timestamps, and before/after hashes; they do not copy proposal text or raw
+  source content.
 - Candidate scope is deterministic and never crosses projects automatically.
 - Ordinary candidates and Conflict Overflow Candidates remain distinct schemas,
   identities, paths, and review flows.
@@ -183,7 +207,7 @@ may perform a disposition transition.
 | Duplicate exact proposal from already processed sources | No new candidate and no semantic replay |
 | Disposition for missing, stale, or non-pending identity | Fail closed; change nothing |
 | Interrupted candidate publication | Recover from the fixed publication intent; do not advance the checkpoint before its Run Manifest |
-| Interrupted disposition update | Reconcile candidate status against its durable disposition receipt before retry |
+| Interrupted disposition update | Recover the fixed Owner-review intent and reconcile candidate status against its durable disposition receipt before retry |
 
 Repeating the same validated creation or disposition operation MUST converge on
 one candidate identity and one terminal state without duplicate artifacts.
@@ -195,10 +219,12 @@ identity, overwrite it, or delete it.
 ## Security and privacy
 
 Candidate text MUST already be permitted and redacted by capture policy and MUST
-pass generated-output secret scanning before publication. Candidate files live
-in the configured private vault and MUST NOT be copied into the public project.
-Raw conversation text requires separate explicit inspection of the still
-available agent-owned source.
+pass generated-output secret scanning before publication. Candidate files and
+Owner-review receipts live in the configured private vault and MUST NOT be
+copied into the public project. Review intents and staged post-images are
+private local runtime state and are removed only after the receipt and candidate
+post-image are verified. Raw conversation text requires separate explicit
+inspection of the still available agent-owned source.
 
 ## Compatibility
 

@@ -4,15 +4,15 @@ title: Orca Deployment Architecture
 document_type: architecture
 status: accepted
 authority: normative
-implementation_status: partial
+implementation_status: implemented
 applies_to:
   - phase-1
   - phase-2-candidate
   - phase-3-candidate
 owners:
   - project-owner
-last_reviewed: 2026-08-30
-last_verified_against_code: 2026-08-30
+last_reviewed: 2026-08-31
+last_verified_against_code: 2026-08-31
 related:
   - ARCH-OVERVIEW
   - PROJECT-ROADMAP
@@ -49,11 +49,11 @@ Windows host
 ```
 
 Phase 1 uses one Codex Desktop agent, one authorized WSL processor runtime, and
-one local vault. The local CLI and composition root are implemented and tested
-against an isolated synthetic vault. One Owner-authorized redacted private
-provider/candidate canary passed, but routine lifecycle-hook deployment remains
-installed behind its default-off control. The Owner enabled it and the bounded
-two-turn lifecycle canary passed; the same vault toggle remains the stop control.
+one local vault. The local CLI, composition root, and project lifecycle hooks
+are implemented. The bounded two-turn provider/candidate canary passed while
+the Owner temporarily enabled the lifecycle; it is currently disabled. The
+vault toggle stops new automatic work but cannot cancel a provider request
+already in progress.
 
 ## Location boundaries
 
@@ -122,3 +122,4 @@ Synchronization would be transport, not authority or semantic merge.
 - **Roadmap:** [Roadmap](../ROADMAP.md)
 - **Security boundary:** [Security and Trust](security-and-trust.md)
 - **Current state:** [Current Status](../STATUS.md)
+- **Deployment procedure:** [Phase 1 Local Deployment Guide](../08-operations/deployment.md)

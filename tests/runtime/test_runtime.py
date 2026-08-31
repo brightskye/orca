@@ -30,6 +30,61 @@ def _batch() -> ConversationBatch:
 
 
 class RuntimeTests(unittest.TestCase):
+    def test_source_cursor_advances_monotonically_and_privately(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "rollout.jsonl"
+            source.write_text("{}\n", encoding="utf-8")
+            runtime = LocalRuntime(root / "runtime")
+
+            self.assertEqual(
+                runtime.source_offset("codex-local", "conversation-runtime", source),
+                0,
+            )
+            path = runtime.advance_source_offset(
+                "codex-local", "conversation-runtime", source, source.stat().st_size
+            )
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertEqual(
+                runtime.source_offset("codex-local", "conversation-runtime", source),
+                source.stat().st_size,
+            )
+            with self.assertRaisesRegex(ValueError, "cannot move backward"):
+                runtime.advance_source_offset(
+                    "codex-local", "conversation-runtime", source, 0
+                )
+
+    def test_discovery_failure_receipt_is_content_free_and_clearable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "private-rollout-name.jsonl"
+            runtime = LocalRuntime(root / "runtime")
+
+            failure_id = runtime.record_discovery_failure(source)
+            receipt = root / "runtime" / "receipts" / f"discovery-{failure_id}.json"
+
+            self.assertTrue(receipt.is_file())
+            self.assertEqual(receipt.stat().st_mode & 0o777, 0o600)
+            self.assertNotIn(source.name, receipt.read_text(encoding="utf-8"))
+            runtime.clear_discovery_failure(source)
+            self.assertFalse(receipt.exists())
+
+    def test_explicit_scope_choice_is_private_content_free_and_replaceable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = LocalRuntime(root)
+
+            self.assertIsNone(runtime.scope_choice("conversation-runtime"))
+            path = runtime.set_scope_choice("conversation-runtime", "general")
+
+            self.assertEqual(runtime.scope_choice("conversation-runtime"), "general")
+            self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+            self.assertNotIn("conversation text", path.read_text(encoding="utf-8"))
+            runtime.set_scope_choice("conversation-runtime", "unassigned")
+            self.assertEqual(runtime.scope_choice("conversation-runtime"), "unassigned")
+            with self.assertRaisesRegex(ValueError, "invalid conversation identity"):
+                runtime.set_scope_choice("../escape", "general")
+
     def test_work_item_rejects_invalid_trigger_source_kind_and_locator(self) -> None:
         common = (
             "work_safe", "explicit-save", "codex-local", "conversation-runtime",
@@ -192,6 +247,68 @@ class RuntimeTests(unittest.TestCase):
             finally:
                 os.close(descriptor)
             self.assertEqual(runtime.run_once(lambda *_: self.fail("called")), "idle")
+
+    def test_bounded_worker_drains_multiple_items_and_reports_safety_limit(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = LocalRuntime(root)
+            for index in range(3):
+                runtime.enqueue_pointer(
+                    trigger="explicit-save",
+                    connector_id="codex-local",
+                    conversation_id=f"conversation-{index}",
+                    source_path=root / f"rollout-{index}.jsonl",
+                    start_offset=0,
+                    scope_kind="unassigned",
+                    scope_id="unassigned",
+                )
+            calls: list[str] = []
+
+            self.assertEqual(
+                runtime.run_bounded(
+                    lambda item, batch: calls.append(item.conversation_id),
+                    max_items=2,
+                ),
+                "pending",
+            )
+            self.assertEqual(len(calls), 2)
+            self.assertEqual(len(runtime.pending()), 1)
+            self.assertEqual(
+                runtime.run_bounded(
+                    lambda item, batch: calls.append(item.conversation_id),
+                    max_items=2,
+                ),
+                "success",
+            )
+            self.assertEqual(set(calls), {"conversation-0", "conversation-1", "conversation-2"})
+            self.assertEqual(runtime.pending(), ())
+            with self.assertRaisesRegex(ValueError, "max_items must be positive"):
+                runtime.run_bounded(lambda *_: None, max_items=0)
+
+    def test_disabled_guard_leaves_automatic_work_unattempted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = LocalRuntime(root)
+            runtime.enqueue_pointer(
+                trigger="pre-compact",
+                connector_id="codex-local",
+                conversation_id="conversation-runtime",
+                source_path=root / "rollout.jsonl",
+                start_offset=0,
+                scope_kind="unassigned",
+                scope_id="unassigned",
+            )
+
+            self.assertEqual(
+                runtime.run_bounded(
+                    lambda *_: self.fail("disabled work was processed"),
+                    should_process=lambda item: False,
+                ),
+                "disabled",
+            )
+            pending = runtime.pending()
+            self.assertEqual(len(pending), 1)
+            self.assertEqual(pending[0].attempts, 0)
 
     def test_catch_up_uses_same_path_and_empty_discovery_is_idle(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

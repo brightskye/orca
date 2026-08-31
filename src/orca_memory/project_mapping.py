@@ -150,11 +150,22 @@ class ProjectMappingPublisher:
         self._complete(intent_path, fault=fault)
         return host_config_path
 
-    def recover(self, intent_path: Path) -> Path:
+    def recover(
+        self,
+        intent_path: Path,
+        *,
+        host_config_path: Path | None = None,
+    ) -> Path:
         expected_root = self.runtime_root / "project-mappings"
         resolved = intent_path.resolve()
         if expected_root not in resolved.parents:
             raise ValueError("project mapping intent is outside its runtime root")
+        if host_config_path is not None:
+            intent = _load_intent(resolved)
+            if intent["host_config"].get("path") != str(host_config_path.resolve()):
+                raise ProjectMappingRepairRequired(
+                    "project mapping intent targets another host configuration"
+                )
         self._complete(resolved, fault=None)
         return resolved
 

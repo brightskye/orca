@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 
 from orca_memory.conflicts import (
+    ConflictOverflow,
     ConflictProposal,
     SupersedeProposal,
     apply_conflict,
@@ -78,7 +79,18 @@ class ConflictTests(unittest.TestCase):
         self.assertEqual(four_state.review_state, "overflow")
         self.assertEqual(overflow.variant_id, "v4")
         self.assertIn("authority: noncanonical", overflow.render())
+        self.assertEqual(ConflictOverflow.parse(overflow.render()), overflow)
         self.assertIn("candidates/conflicts/projects/orca/", overflow.relative_path("Orca").as_posix())
+
+        resolved = review_conflict(
+            four_state,
+            owner_confirmed=True,
+            select_variant_id="v4",
+            updated_at="2026-08-30T13:00:00Z",
+            overflow_variants=(overflow,),
+        )
+        self.assertEqual(resolved.current, "Use a remote index.")
+        self.assertIn("`v4` — Remote — selected", resolved.render())
 
     def test_exact_variant_support_does_not_rewrite(self) -> None:
         record = start_conflict(

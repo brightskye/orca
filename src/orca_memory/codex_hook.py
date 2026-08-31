@@ -14,9 +14,10 @@ from typing import Any, Callable, Mapping, TextIO
 from orca_memory.application import LocalOrcaApplication
 from orca_memory.configuration import ValidatedConfiguration, load_configuration
 from orca_memory.conversation import ConversationBatch, normalize_codex_rollout
+from orca_memory.projects import resolve_project
 from orca_memory.runtime import LocalRuntime
 from orca_memory.segmentation import chunk_turns
-from orca_memory.storage import Storage
+from orca_memory.storage import MemoryScope, Storage
 
 
 CONNECTOR_ID = "codex-local"
@@ -76,6 +77,7 @@ def handle_payload(
     configuration = _load(host_config_path, environment)
     if not configuration.vault.lifecycle.enabled:
         return None
+    scope = resolve_lifecycle_scope(cwd, session_id, configuration)
 
     if event == "SessionStart":
         transcript = _optional_transcript(payload.get("transcript_path"))
@@ -87,7 +89,12 @@ def handle_payload(
                 configuration=configuration,
             )
         application = LocalOrcaApplication(configuration, _NoSemanticProvider())
-        startup = application.startup(session_id=session_id, context="general")
+        startup = application.startup(
+            session_id=session_id,
+            context="general",
+            project_id=scope.scope_id if scope.kind == "project" else None,
+            project_alias=scope.project_alias,
+        )
         return "\n\n".join(
             part for part in (startup.guidance, startup.reminder) if part
         )
@@ -105,28 +112,48 @@ def handle_payload(
         max_attempts=configuration.vault.retry.max_attempts,
     )
     if event == "PreCompact":
+        start_offset = runtime.source_offset(CONNECTOR_ID, session_id, transcript)
         runtime.enqueue_pointer(
             trigger="pre-compact",
             connector_id=CONNECTOR_ID,
             conversation_id=session_id,
             source_path=transcript,
-            start_offset=0,
-            scope_kind="unassigned",
-            scope_id="unassigned",
+            start_offset=start_offset,
+            scope_kind=scope.kind,
+            scope_id=scope.scope_id,
+            project_alias=scope.project_alias,
         )
     else:
-        batch = normalize_codex_rollout(transcript, connector_id=CONNECTOR_ID)
+        start_offset = runtime.source_offset(CONNECTOR_ID, session_id, transcript)
+        batch = normalize_codex_rollout(
+            transcript,
+            connector_id=CONNECTOR_ID,
+            start_offset=start_offset,
+        )
         if batch.conversation_id != session_id:
             raise HookInputError("normalized transcript identity changed")
         unprocessed = _select_unprocessed_turns(batch, configuration)
         if not unprocessed.turns:
+            runtime.advance_source_offset(
+                CONNECTOR_ID,
+                session_id,
+                transcript,
+                batch.processed_through,
+            )
             return None
         runtime.enqueue_session_end(
             unprocessed,
             now=datetime.now(timezone.utc),
-            scope_kind="unassigned",
-            scope_id="unassigned",
+            scope_kind=scope.kind,
+            scope_id=scope.scope_id,
+            project_alias=scope.project_alias,
             retention_hours=configuration.vault.retry.retention_hours,
+        )
+        runtime.advance_source_offset(
+            CONNECTOR_ID,
+            session_id,
+            transcript,
+            batch.processed_through,
         )
     _spawn_worker(
         host_config_path,
@@ -284,6 +311,41 @@ def _load(host_config_path: Path, environment: Mapping[str, str]) -> ValidatedCo
     )
 
 
+def resolve_lifecycle_scope(
+    cwd: Path,
+    session_id: str,
+    configuration: ValidatedConfiguration,
+) -> MemoryScope:
+    workspace_root = _workspace_root(cwd)
+    resolution = resolve_project(
+        workspace_root,
+        configuration.host.project_root_mappings,
+        configuration.project_registry,
+        owner_choice="unassigned",
+    )
+    if resolution.allows_project_processing:
+        assert resolution.project_id is not None
+        assert resolution.project_alias is not None
+        return MemoryScope(
+            "project",
+            resolution.project_id,
+            resolution.project_alias,
+        )
+    if resolution.status == "error":
+        raise HookInputError("configured project scope cannot be resolved")
+    choice = LocalRuntime(configuration.host.runtime_path).scope_choice(session_id)
+    if choice == "general":
+        return MemoryScope("general", "general")
+    return MemoryScope("unassigned", "unassigned")
+
+
+def _workspace_root(cwd: Path) -> Path:
+    for candidate in (cwd, *cwd.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return cwd
+
+
 def _select_unprocessed_turns(
     batch: ConversationBatch, configuration: ValidatedConfiguration
 ) -> ConversationBatch:
@@ -386,7 +448,7 @@ def _spawn_worker(
     )
 
 
-__all__ = ["handle_payload", "main"]
+__all__ = ["handle_payload", "main", "resolve_lifecycle_scope"]
 
 
 if __name__ == "__main__":

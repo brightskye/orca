@@ -23,6 +23,8 @@ from orca_memory.retry import (
 
 
 WORK_SCHEMA = "orca-runtime-work/0.1"
+SCOPE_CHOICE_SCHEMA = "orca-conversation-scope-choice/0.1"
+SOURCE_CURSOR_SCHEMA = "orca-source-cursor/0.1"
 _TRIGGERS = frozenset({"pre-compact", "session-end", "explicit-save", "catch-up"})
 _SOURCE_KINDS = frozenset({"rollout-pointer", "retry-spool"})
 _SAFE_WORK_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$")
@@ -162,9 +164,145 @@ class LocalRuntime:
             return ()
         return tuple(_load_work(path) for path in sorted(root.glob("*.json")))
 
+    def set_scope_choice(
+        self,
+        conversation_id: str,
+        scope_kind: Literal["general", "unassigned"],
+    ) -> Path:
+        """Record one explicit Owner scope choice without conversation content."""
+
+        path = self._scope_choice_path(conversation_id)
+        if scope_kind not in {"general", "unassigned"}:
+            raise ValueError("conversation scope choice must be general or unassigned")
+        _write_private(
+            path,
+            {
+                "schema": SCOPE_CHOICE_SCHEMA,
+                "conversation_id": conversation_id,
+                "scope_kind": scope_kind,
+            },
+            exclusive=False,
+        )
+        return path
+
+    def scope_choice(
+        self, conversation_id: str
+    ) -> Literal["general", "unassigned"] | None:
+        """Load an explicit Owner scope choice, if one exists."""
+
+        path = self._scope_choice_path(conversation_id)
+        if not path.exists():
+            return None
+        if path.is_symlink() or path.stat().st_mode & 0o077:
+            raise ValueError("unsafe conversation scope choice")
+        value = json.loads(path.read_text(encoding="utf-8"))
+        if (
+            not isinstance(value, dict)
+            or set(value) != {"schema", "conversation_id", "scope_kind"}
+            or value.get("schema") != SCOPE_CHOICE_SCHEMA
+            or value.get("conversation_id") != conversation_id
+            or value.get("scope_kind") not in {"general", "unassigned"}
+        ):
+            raise ValueError("invalid conversation scope choice")
+        return value["scope_kind"]
+
+    def source_offset(
+        self,
+        connector_id: str,
+        conversation_id: str,
+        source_path: Path,
+    ) -> int:
+        """Return the last durably handed-off complete source byte offset."""
+
+        path = self._source_cursor_path(connector_id, conversation_id, source_path)
+        if not path.exists():
+            return 0
+        if path.is_symlink() or path.stat().st_mode & 0o077:
+            raise ValueError("unsafe source cursor")
+        value = json.loads(path.read_text(encoding="utf-8"))
+        expected = {
+            "schema",
+            "connector_id",
+            "conversation_id",
+            "source_path",
+            "processed_through",
+        }
+        if (
+            not isinstance(value, dict)
+            or set(value) != expected
+            or value.get("schema") != SOURCE_CURSOR_SCHEMA
+            or value.get("connector_id") != connector_id
+            or value.get("conversation_id") != conversation_id
+            or value.get("source_path") != str(source_path.resolve())
+            or not isinstance(value.get("processed_through"), int)
+            or isinstance(value.get("processed_through"), bool)
+            or value["processed_through"] < 0
+        ):
+            raise ValueError("invalid source cursor")
+        return value["processed_through"]
+
+    def advance_source_offset(
+        self,
+        connector_id: str,
+        conversation_id: str,
+        source_path: Path,
+        processed_through: int,
+    ) -> Path:
+        """Advance one source cursor monotonically after durable handoff."""
+
+        if (
+            not isinstance(processed_through, int)
+            or isinstance(processed_through, bool)
+            or processed_through < 0
+        ):
+            raise ValueError("source cursor offset must be nonnegative")
+        current = self.source_offset(connector_id, conversation_id, source_path)
+        if processed_through < current:
+            raise ValueError("source cursor cannot move backward")
+        path = self._source_cursor_path(connector_id, conversation_id, source_path)
+        _write_private(
+            path,
+            {
+                "schema": SOURCE_CURSOR_SCHEMA,
+                "connector_id": connector_id,
+                "conversation_id": conversation_id,
+                "source_path": str(source_path.resolve()),
+                "processed_through": processed_through,
+            },
+            exclusive=False,
+        )
+        return path
+
+    def record_discovery_failure(self, source_path: Path) -> str:
+        """Record one content-free catch-up discovery failure."""
+
+        failure_id = self._discovery_failure_id(source_path)
+        path = self.runtime_root / "receipts" / f"discovery-{failure_id}.json"
+        _write_private(
+            path,
+            {
+                "schema": "orca-runtime-discovery-failure/0.1",
+                "failure_id": failure_id,
+                "reason": "invalid-source",
+            },
+            exclusive=False,
+        )
+        return failure_id
+
+    def clear_discovery_failure(self, source_path: Path) -> None:
+        """Clear a discovery receipt after the same source validates again."""
+
+        failure_id = self._discovery_failure_id(source_path)
+        path = self.runtime_root / "receipts" / f"discovery-{failure_id}.json"
+        if path.exists():
+            path.unlink()
+
     def run_once(
-        self, handler: Callable[[WorkItem, ConversationBatch | None], None]
-    ) -> Literal["idle", "locked", "success", "retry", "failed"]:
+        self,
+        handler: Callable[[WorkItem, ConversationBatch | None], None],
+        *,
+        should_process: Callable[[WorkItem], bool] | None = None,
+    ) -> Literal["idle", "locked", "success", "retry", "failed", "disabled"]:
         lock_path = self.runtime_root / "locks" / "processor.lock"
         lock_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
         descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
@@ -183,6 +321,8 @@ class LocalRuntime:
             if not pending:
                 return "failed" if expired_orphans else "idle"
             item = pending[0]
+            if should_process is not None and not should_process(item):
+                return "disabled"
             queue_path = self._queue_path(item.work_id)
             batch = None
             if item.source_kind == "retry-spool":
@@ -223,17 +363,52 @@ class LocalRuntime:
         finally:
             os.close(descriptor)
 
+    def run_bounded(
+        self,
+        handler: Callable[[WorkItem, ConversationBatch | None], None],
+        *,
+        max_items: int = 20,
+        should_process: Callable[[WorkItem], bool] | None = None,
+    ) -> Literal[
+        "idle", "locked", "success", "retry", "failed", "pending", "disabled"
+    ]:
+        """Process queued work until empty, blocked, or the safety limit is reached."""
+
+        if not isinstance(max_items, int) or isinstance(max_items, bool) or max_items <= 0:
+            raise ValueError("worker max_items must be positive")
+        completed = 0
+        failed = False
+        while completed < max_items:
+            result = self.run_once(handler, should_process=should_process)
+            if result == "success":
+                completed += 1
+                continue
+            if result == "failed":
+                completed += 1
+                failed = True
+                continue
+            if result == "idle":
+                if failed:
+                    return "failed"
+                return "success" if completed else "idle"
+            return result
+        if self.pending():
+            return "pending"
+        return "failed" if failed else "success"
+
     def catch_up(
         self,
         discover: Callable[[], tuple[WorkItem, ...]],
         handler: Callable[[WorkItem, ConversationBatch | None], None],
-    ) -> Literal["idle", "locked", "success", "retry", "failed"]:
+    ) -> Literal[
+        "idle", "locked", "success", "retry", "failed", "pending", "disabled"
+    ]:
         discovered = discover()
         for item in discovered:
             if item.trigger != "catch-up":
                 raise ValueError("catch-up discovery returned another trigger")
             self._write_queue(item)
-        return self.run_once(handler)
+        return self.run_bounded(handler)
 
     def _write_queue(self, item: WorkItem) -> None:
         path = self._queue_path(item.work_id)
@@ -259,6 +434,50 @@ class LocalRuntime:
         if queue_root.parent != self.runtime_root:
             raise ValueError("runtime queue path escapes the runtime root")
         return queue_root
+
+    def _scope_choice_path(self, conversation_id: str) -> Path:
+        if not isinstance(conversation_id, str) or not _SAFE_WORK_ID.fullmatch(conversation_id):
+            raise ValueError("invalid conversation identity for scope choice")
+        root = (self.runtime_root / "scope-choices").resolve(strict=False)
+        if root.parent != self.runtime_root:
+            raise ValueError("runtime scope-choice path escapes the runtime root")
+        path = (root / f"{conversation_id}.json").resolve(strict=False)
+        if path.parent != root:
+            raise ValueError("runtime scope-choice path escapes the runtime root")
+        return path
+
+    def _source_cursor_path(
+        self,
+        connector_id: str,
+        conversation_id: str,
+        source_path: Path,
+    ) -> Path:
+        if (
+            not isinstance(connector_id, str)
+            or not _SAFE_WORK_ID.fullmatch(connector_id)
+            or not isinstance(conversation_id, str)
+            or not _SAFE_WORK_ID.fullmatch(conversation_id)
+            or not source_path.is_absolute()
+        ):
+            raise ValueError("invalid source cursor identity")
+        root = (self.runtime_root / "source-cursors").resolve(strict=False)
+        if root.parent != self.runtime_root:
+            raise ValueError("runtime source-cursor path escapes the runtime root")
+        digest = hashlib.sha256(
+            json.dumps(
+                [connector_id, conversation_id, str(source_path.resolve())],
+                separators=(",", ":"),
+            ).encode()
+        ).hexdigest()
+        path = (root / f"{digest}.json").resolve(strict=False)
+        if path.parent != root:
+            raise ValueError("runtime source-cursor path escapes the runtime root")
+        return path
+
+    def _discovery_failure_id(self, source_path: Path) -> str:
+        if not isinstance(source_path, Path) or not source_path.is_absolute():
+            raise ValueError("discovery source path must be absolute")
+        return hashlib.sha256(str(source_path.resolve(strict=False)).encode()).hexdigest()[:24]
 
     def _retry_spool_path(self, locator: str) -> Path:
         if not _valid_retry_locator(locator):
@@ -360,4 +579,10 @@ def _write_private(path: Path, value: object, *, exclusive: bool) -> None:
         os.fsync(stream.fileno())
 
 
-__all__ = ["LocalRuntime", "WorkItem", "WORK_SCHEMA"]
+__all__ = [
+    "LocalRuntime",
+    "SCOPE_CHOICE_SCHEMA",
+    "SOURCE_CURSOR_SCHEMA",
+    "WorkItem",
+    "WORK_SCHEMA",
+]

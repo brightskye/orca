@@ -54,14 +54,16 @@ was accepted and promoted on 2026-08-30.
 | Owner and final-assistant Codex normalization, privacy filtering, partial-tail deferral, and credential-pattern redaction | Implemented | `conversation.py`, `privacy.py`, synthetic deterministic capture tests, and Processor evidence/context separation tests |
 | Bounded Processor, Continuation Summary, and controlled proposal validation | Implemented | Category/total budgets, chunks, UTF-8 segments, overlap, related-record bounds, output limits, and controlled outcomes are directly tested |
 | Run Manifest, replay, checkpoint-last publication, `no_memory`, and source/segmentation conflict handling | Implemented | Manifest/checkpoint `0.2`, exact segment cursors, strict source/operation/output joins, mixed `0.1` reads, and publication-intent recovery are directly tested |
-| AgentCairn governed adapters | Implemented | Prevalidated Distiller seam and local BM25 retrieval over only prefiltered projections are directly tested; the separate Codex CLI provider canary passed on one authorized redacted sample |
-| Typed Memory Records, Project Summary, and project registration/relink | Implemented | Validated records, add/support/update, summary refresh, exact-worktree resolution, and recoverable mapping tests |
+| AgentCairn governed adapters | Implemented | Prevalidated Distiller seam and local BM25 retrieval over only prefiltered projections are directly tested; an earlier separate Codex CLI provider canary passed on one authorized redacted sample, and release requires a fresh exact-revision canary before push |
+| Typed Memory Records, Project Summary, and project registration/relink | Implemented with operator commands | Validated records, add/support/update, summary refresh, exact-root lifecycle resolution, and recoverable registration/relink commands and tests |
 | Knowledge Candidates, supersession, conflict records, and overflow | Implemented | Strict noncanonical schemas, stable variants, Owner-only review/disposition primitives, distinct placement, and joined publication tests |
+| Owner candidate/conflict review and recovery commands | Implemented and tested synthetically | Separate candidate and conflict commands publish content-minimized receipts and private recoverable intents; `orca recovery owner-review`, `publication`, and `project-mapping` reconcile only fixed safe operation IDs and never make a semantic call |
+| Encrypted vault backup and staging restore | Implemented and tested at the GPG boundary | `backup create` requires lifecycle disabled, no pending work, an explicit recipient, and a new output; `backup verify` checks every hash; `backup stage` exposes only a new staging directory and never overwrites live state. A real GPG backup has not run in this reconciliation |
 | Interaction observations, profiles, and compiled guidance | Implemented | Exact-source Manifest observations, content-free abstentions, rebuildable scoped profiles, lifecycle rules, and fixed bounded guidance selection are directly tested |
 | Explicit Recall and retrieval projections | Implemented | Hard-filtered bounded results, exact-conversation behavior, governed AgentCairn ranking, private rebuildable hash-checked indexes, and the local explicit CLI are directly tested |
-| Lifecycle hooks, queue, retry spool, catch-up scheduling, and explicit save | Implemented, installed, enabled canary passed | The Owner-controlled toggle remains available and unredacted input remains impossible. The authorized two-turn canary passed SessionStart, PreCompact, exact Luna/xhigh processing, SessionEnd deduplication, and detached replay; the queue returned to zero |
-| Orca Status, Attention Items, and session reminder | Implemented | Content-free collection, stable IDs, rebuild, routes, counts, privacy, failure visibility, and once-per-session suppression are directly tested |
-| Host configuration loading and WSL deployment | Implemented for Phase 1 | Strict host/vault configuration validates; default-off and enabled paths are directly verified. The enabled private canary produced one secret-free noncanonical candidate, one Manifest/checkpoint pair, one review Attention Item, and no canonical output |
+| Lifecycle hooks, deterministic Project/General/Unassigned scope, bounded queue drain, retry spool, catch-up command/cadence, and explicit save | Implemented and installed; currently disabled; earlier canary passed | Exact mapped roots select Project, explicit content-free Owner conversation choices may select General, and unresolved roots stay Unassigned. Automatic work rechecks the toggle per queued unit, retries transient failures with bounded delays, continues after terminal failures, and uses private source cursors so only new complete bytes are handed off. Catch-up skips Unassigned history without provider access. An earlier authorized two-turn canary passed SessionStart, PreCompact, Luna/xhigh processing, SessionEnd deduplication, and detached replay. Release requires the same bounded canary on the exact commit before push. Orca installs no daemon or OS scheduler |
+| Orca Status, Attention Items, and session reminder | Implemented | Content-free collection includes pending queue work and rejected catch-up sources, stable IDs, rebuild, routes, counts, privacy, failure visibility, and once-per-session suppression are directly tested |
+| Host configuration loading and WSL deployment | Implemented for Phase 1 | Strict host/vault configuration validates; default-off and enabled paths are directly verified. The earlier authorized canary produced one secret-free noncanonical candidate, one Manifest/checkpoint pair, one review Attention Item, and no canonical output; exact-revision release evidence is retained locally rather than in tracked private data |
 | Canonical automatic apply | Deliberately absent | Disabled and unexposed by Phase 1 governance |
 
 ## Known divergence
@@ -69,12 +71,17 @@ was accepted and promoted on 2026-08-30.
 - The private local runtime and retrieval reconciliation are implemented and
   synthetically integrated. One authorized redacted private sample passed the
   provider/candidate path. The installed lifecycle dispatcher is verified both
-  off and enabled on the bounded two-turn sample. The task sandbox blocks nested
-  Codex state-database writes; normal local Codex state access was required for
-  the provider worker and detached replay.
+  off and enabled on the bounded two-turn sample. This is earlier-sample
+  evidence only; the release process therefore gates push on an authorized
+  canary for the exact commit. The task sandbox blocks nested Codex state-database writes; normal
+  local Codex state access was required for the provider worker and detached
+  replay.
 - Codex's internal rollout format remains non-public. The connector supports the
   accepted Responses-style `final_answer` marker and fails closed on drift, but
   isolated host-format verification remains required before routine use.
+- Encrypted backup uses the local GPG boundary and has deterministic hash and
+  staging tests. A real backup and restore of the configured private vault have
+  not been executed here.
 
 These are implementation gaps, not permission to weaken the accepted contracts.
 
@@ -121,8 +128,8 @@ gate.
 
 - Repository and documentation review date: 2026-08-31.
 - Code was compared with the active contracts during the PDS audit.
-- The complete current active regression command passed 185 tests on
-  2026-08-30. Together with the retained operational and quality evidence it
+- The complete current active regression command passed 228 tests on
+  2026-08-31. Together with the retained operational and quality evidence it
   satisfied the technical gate; the Owner accepted the complete evidence set on
   2026-08-31.
 - Historical migration evidence remains in the non-authoritative

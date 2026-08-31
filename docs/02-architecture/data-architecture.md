@@ -42,6 +42,8 @@ data classes.
 | Conversation Evidence | Connector selection | Noncanonical transient evidence | Memory only during processing | Discard after processing; no raw archive | Re-readable when source remains | None | Private, minimized/redacted |
 | Retry spool | Connector/runtime | Noncanonical operational recovery | Local `.runtime/` | Delete after success; at most three automatic attempts; default 72-hour terminal retention then content-free receipt | Re-created only from available source | Never | Highly sensitive |
 | Publication intent and staged post-images | Storage/runtime | Noncanonical operational recovery | Local `.runtime/publications/` | Create before final artifact mutation; delete only after verified Manifest and checkpoint publication | Completes the fixed run without another semantic call; otherwise requires human repair | Never | Highly sensitive |
+| Owner-review intent and staged post-images | Owner-review/runtime | Noncanonical operational recovery | Local `.runtime/owner-reviews/` | Create before candidate or conflict disposition; delete only after the receipt and target post-images verify | Completes the fixed Owner decision without a semantic call; otherwise requires Owner repair | Never | Highly sensitive |
+| Owner-review receipt | Owner decision/Storage | Noncanonical decision provenance | Vault `provenance/owner-reviews/` | Immutable content-minimized receipt for one explicit candidate or conflict outcome | Durable receipt is not rebuilt from candidate text; status can reconcile from it | None | Private metadata and hashes |
 | Conversation Continuation Summary | Storage from validated proposal | Noncanonical derived view | Vault shallow scope | Living replacement view | Rebuildable from permitted evidence only while available; provenance in Manifests | None | Private |
 | Typed Memory Record | Storage from validated proposal | Noncanonical working memory | Vault shallow project/general/unassigned scope | Living current-state record with retained bounded lineage; no general automated Phase 1 retention | Current state may be reconstructed from governed records and Manifests only where semantics permit | None | Private |
 | Project/Workstream Summary | Storage from validated proposal | Noncanonical derived view | Vault shallow project scope | Refresh on material record change; stale views excluded | Rebuildable from current typed records | None | Private |
@@ -59,6 +61,7 @@ data classes.
 | Host configuration | Owner/operator | Operational | Local ignored `config/host.yaml` plus optional `ORCA_VAULT_PATH` | Owner-managed; validated before operation | No | Never | Host-private paths and identities; no credentials |
 | Vault configuration | Owner/operator | Operational | Vault `System/Orca Memory/orca-memory.yaml` | Owner-managed accepted policy and budget selection | No | None | Private |
 | Credentials | Owner/operator and configured Adapter | External secret | Separately authorized local mechanism outside vault and Git | Owner-managed | No | Never | Secret |
+| Encrypted backup | Owner/operator | Recovery copy; not memory authority | Owner-selected private destination outside vault and runtime | Created only with lifecycle disabled and no pending work; existing output is never overwritten | Tested by decrypting to a private temporary workspace and checking every manifest hash; restore exposes only a new staging directory | Never | Encrypted private copy |
 
 ## Canonical sources
 
@@ -90,6 +93,9 @@ records.
    intent is removed.
 7. Disposable projections reconcile from current permitted Markdown and
    Manifests.
+8. An explicit Owner candidate or conflict review publishes its content-free
+   receipt before fixed target post-images; its local review intent is removed
+   only after verification.
 
 Project identity has a separate explicit lifecycle: deterministic discovery
 uses an exact existing mapping, exact Git worktree reuse may add one mapping,
@@ -126,7 +132,8 @@ semantics, and checkpoint-last progress rather than claimed transactional
 atomicity. A missing or invalid intent never authorizes automatic orphan cleanup.
 Optional SQLite and retrieval indexes are disposable accelerators.
 Project mapping recovery likewise completes only a valid fixed intent whose
-before/after states match; conflicting or orphan state requires Owner repair.
+before/after states match; Owner-review recovery follows the same fixed-intent
+and hash-matching rule. Conflicting or orphan state requires Owner repair.
 
 ## Synchronization
 
@@ -146,16 +153,26 @@ derive identity from filenames or content hashes.
 
 The configured vault requires Owner-managed backup appropriate to private
 memory. The project repository backs up only public source and documentation.
-Disposable indexes are rebuilt, not backed up as authority. The current runbook
-defines only verified operational procedures.
+Disposable indexes are rebuilt, not backed up as authority. The Phase 1 backup
+command creates an encrypted GPG archive of the full vault plus only validated
+`source-cursors/` and `scope-choices/` runtime JSON. It excludes raw rollouts,
+host configuration, credentials, queues, retry spools, runtime checkpoints,
+indexes, locks, and other disposable or pending runtime state; vault-local
+Manifests remain part of the full vault copy. Backup creation
+requires `lifecycle.enabled: false` and no pending queue/recovery work. Verify
+checks the archive manifest and every member hash. Restore decrypts only into a
+new private staging directory and never overwrites a live vault or runtime.
 
 ## Known risks
 
-- Ordinary Knowledge Candidate behavior is accepted but remains unimplemented.
-- General Shallow Memory and Manifest retention is intentionally unspecified in
-  Phase 1 and requires an explicit later decision.
-- Backup and filesystem semantics have not yet been verified in a routine
-  deployment.
+- Owner candidate and conflict disposition, review-intent recovery, and the
+  separate recovery commands are implemented and covered by deterministic
+  tests; they still require the normal Owner workflow when a repair item is
+  reported.
+- The encrypted backup command and hash-checked staging restore are tested with
+  a fake GPG boundary. A real GPG backup of the configured private vault remains
+  an operator step. Exact-revision canary evidence is retained locally and must
+  pass before a release push.
 
 ## Related documents
 

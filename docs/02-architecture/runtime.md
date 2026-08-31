@@ -40,8 +40,10 @@ concurrency boundaries, publication order, and recovery responsibilities.
 | Explicit `Orca Status` | Build and show content-free unresolved Attention Items without a model call or state mutation |
 | Codex session-start path | Load bounded applicable interaction guidance only |
 | Explicit Recall invocation | Retrieve permitted authority-labelled context for a specific request |
+| Explicit Owner review | Approve/reject a candidate, select/resolve/acknowledge a conflict, and record the decision without a model call |
+| Explicit recovery or backup | Reconcile one safe operation ID, verify a backup, or expose verified backup contents in new staging |
 | `PreCompact` or `SessionEnd` hook | Perform bounded deterministic handoff and queue work |
-| One-shot worker | Read, deduplicate, process, validate, and publish one bounded unit of work |
+| One-shot worker | Drain up to 20 queued units by default, processing each unit through the bounded pipeline |
 | Periodic catch-up | Discover missed work and invoke the same one-shot worker |
 | Retrieval reconciliation | Rebuild or update disposable projections and indexes from current Markdown |
 
@@ -52,6 +54,12 @@ Installed lifecycle hooks first load the validated vault setting
 transcript access or other automatic work. Enabled hooks follow the same
 mandatory local privacy and redaction path; the setting cannot enable
 unredacted provider input. Explicit operator commands are separate.
+
+Each enabled lifecycle event resolves its working directory before loading
+project guidance or queueing work. A valid exact root mapping selects Project;
+an unmapped conversation uses General only after the Owner records that explicit
+conversation choice; otherwise it remains Unassigned. This decision is
+content-free and deterministic, and Project evidence takes precedence.
 
 ## Project setup flow
 
@@ -70,13 +78,15 @@ Project setup does not process memory and cannot grant canonical authority.
 
 ## Session-start flow
 
-1. Resolve applicable active interaction-profile entries by explicit precedence.
-2. Compile only known values through fixed guidance templates within the
+1. Resolve Project, explicitly confirmed General, or Unassigned scope from
+   local governance evidence without a model call.
+2. Resolve applicable active interaction-profile entries by explicit precedence.
+3. Compile only known values through fixed guidance templates within the
    configured budget.
-3. Supply the bounded noncanonical guidance to Codex.
-4. Check the local rebuildable attention projection and, when any item remains
+4. Supply the bounded noncanonical guidance to Codex.
+5. Check the local rebuildable attention projection and, when any item remains
    unresolved, show at most one counts-only reminder for the session.
-5. Perform no automatic semantic memory recall or conversation processing.
+6. Perform no automatic semantic memory recall or conversation processing.
 
 ## Human-attention flow
 
@@ -114,21 +124,29 @@ Exact selection and budget behavior is owned by the
    local retry spool when the source may disappear; `PreCompact` may pass a
    stable rollout pointer.
 3. The hook queues work and starts the one-shot worker.
-4. One per-run local lock prevents concurrent processing of the same work.
-5. The Connector reads after the durable checkpoint and applies event,
-   privacy, redaction, identity, and hashing rules.
-6. Durable Run Manifests establish successful prior processing. Exact replay is
+4. Before each automatic unit, the worker reloads `lifecycle.enabled`. Disabled
+   work stays pending without an attempt. Otherwise, the worker processes units
+   until the queue is empty, a transient unit exhausts its current retry cycle,
+   or the default 20-item safety limit is reached. Transient failures retry
+   after one and two seconds, up to the configured three-attempt default;
+   terminal failures are recorded while later independent units continue.
+   Remaining work reports `pending` rather than claiming completion.
+5. A local lock prevents concurrent processing of the same work.
+6. The Connector reads after the private monotonic source byte cursor and
+   durable processing checkpoint, then applies event, privacy, redaction,
+   identity, and hashing rules.
+7. Durable Run Manifests establish successful prior processing. Exact replay is
    skipped; an unexpected same-policy source revision fails closed.
-7. Processor constructs one bounded chronological input and invokes one
+8. Processor constructs one bounded chronological input and invokes one
    replaceable semantic provider.
-8. Deterministic validation admits only controlled proposals with valid source,
+9. Deterministic validation admits only controlled proposals with valid source,
    scope, identity, lifecycle, and safety properties.
-9. Storage prepares all post-images plus fixed Manifest and checkpoint payloads,
+10. Storage prepares all post-images plus fixed Manifest and checkpoint payloads,
    then publishes one private local publication intent.
-10. Storage publishes validated derived artifacts and the durable Run Manifest.
-11. The source-segment checkpoint advances last; successful retry-spool and
+11. Storage publishes validated derived artifacts and the durable Run Manifest.
+12. The source-segment checkpoint advances last; successful retry-spool and
     publication-intent content is then deleted.
-12. Retrieval reconciliation updates disposable projections and indexes.
+13. Retrieval reconciliation updates disposable projections and indexes.
 
 See the [processing-flow diagram](diagrams/processing-flow.mmd).
 
@@ -147,6 +165,21 @@ hash mismatch fails closed for human repair. A crash after Manifest publication
 permits checkpoint repair from the Manifest. Exact rules belong to the
 [Provenance Ledger](../03-specifications/provenance-ledger.md).
 
+Owner review has a separate fixed-intent path. Candidate and conflict commands
+write a content-minimized receipt first, then publish the fixed candidate or
+record post-image; conflict resolution removes overflow candidates only after
+the resolved record and receipt are durable. `orca recovery owner-review
+<operation-id>` resumes a valid interrupted plan without a semantic call. The
+same recovery command family also handles publication and project-mapping
+intents. Any identity, path, or before/after hash mismatch remains visible for
+Owner repair.
+
+Backup is an explicit maintenance flow, not part of automatic processing. With
+lifecycle disabled and no pending queue or recovery work, Orca encrypts the
+full vault and only validated source-cursor and scope-choice state. Verification
+checks the archive manifest and every member hash. Decryption is exposed only
+to a new private staging directory and never writes a live vault or runtime.
+
 An optional SQLite projection may accelerate processed-source, audit, and
 interaction-observation lookup. It is never the correctness baseline and must be
 rebuildable from durable Manifests without conversation text.
@@ -156,34 +189,48 @@ rebuildable from durable Manifests without conversation text.
 | Failure | Required behavior |
 |---|---|
 | Unsupported, private, injected, tool, reasoning, subagent, or ambiguous event | Exclude before semantic processing; retain at most a content-free local receipt where required |
-| Partial trailing source record | Wait for a later run; current code diverges and raises |
-| Lock contention | Exit without processing |
+| Partial trailing source record | Process complete preceding records, keep the cursor at the last complete byte, and wait for a later run |
+| Lock contention | The competing worker exits; the active worker continues its bounded queue drain |
 | Invalid semantic or deterministic output | Publish no affected derived artifact and leave checkpoint unchanged |
 | Credential-like generated output | Reject before storage, indexing, synchronization, or recall |
 | Index failure | Leave Markdown untouched and require reconciliation or rebuild |
 | Summary/projection refresh failure after valid record change | Keep the source record valid, mark the derived view stale, and exclude it until bounded rebuild |
 | Interrupted conflict-candidate cleanup | Use committed resolution lineage and Manifest state to ignore stale leftovers |
 | Interrupted publication with a valid intent | Complete or reconcile the fixed plan without another semantic call |
+| Interrupted Owner review with a valid intent | Complete or reconcile the fixed receipt and target post-images without another semantic call |
+| Backup requested while lifecycle is enabled or work is pending | Fail closed; disable lifecycle and settle all pending queue/recovery state first |
+| Backup verification or staging finds a path, type, permission, or hash mismatch | Fail closed; expose no staging contents and never alter live state |
 | Orphan, before/after hash conflict, or Manifest/output mismatch | Stop; preserve evidence; expose a content-free human repair item |
 | Project mapping intent conflict, orphan project record, or mapping/record disagreement | Stop; preserve local evidence; require Owner repair before project-scoped processing |
 
 ## Scheduling and concurrency
 
 Hooks perform only bounded deterministic handoff. Semantic work runs in the
-one-shot worker under a local OS lock. Periodic catch-up invokes the same path
-and makes no model call when no eligible work exists. Phase 1 has one authorized
-local processor; later multi-agent or multi-host coordination is not current
-runtime behavior.
+one-shot worker under a local OS lock. One invocation drains up to 20 items by
+default, applies the bounded automatic retry delays, continues past terminal
+failures, and reports `pending` when its limit is reached with work remaining.
+Periodic catch-up considers only mapped Project or explicitly confirmed General
+sources, skips Unassigned history without provider access, and queues only bytes
+after the private source cursor. It resolves and contains each discovered source
+inside the configured rollout store before reading metadata. An invalid source
+creates only a content-free discovery Attention Item and does not prevent later
+valid sources from being considered. Catch-up makes no model call when no
+eligible new work exists. Phase 1 has one authorized local processor; later
+multi-agent or multi-host coordination is not current runtime behavior.
 
 ## Implementation boundary
 
-The accepted library and local CLI surfaces now implement bounded hook queues,
+The accepted library and local CLI surfaces implement bounded hook queues,
 one-shot locking, retry handling, catch-up, recoverable publication, typed
-records, interaction guidance, explicit Recall, rebuild, Orca Status, and its
-session reminder. An isolated synthetic loop is verified. Installation against
-future private Codex sessions remains inactive pending separate Owner
-authorization; the authorized isolated redacted provider/candidate canary does
-not establish routine deployment. See [Current Status](../STATUS.md).
+records, interaction guidance, explicit Owner review, recovery commands,
+encrypted backup verification/staging, explicit Recall, rebuild, Orca Status,
+and its session reminder. The project hook deployment is installed but
+currently disabled. The earlier bounded lifecycle canary is evidence only for
+its recorded sample and revision; release requires a fresh exact-revision
+canary before push. New private samples, providers, vaults, or
+expanded lifecycle scope still require Owner authorization. See
+[Current Status](../STATUS.md) and the [Deployment
+Guide](../08-operations/deployment.md).
 
 ## Related documents
 

@@ -126,10 +126,10 @@ issues must not contain personal memory, secrets, host paths, or exploit detail.
 
 ## Implementation state and residual risk
 
-Basic local redaction and Owner-turn filtering exist. Complete private-session
-handling, assistant classification, secure spooling, hook wiring, output secret
-scanning across every artifact, deployed permissions, and retrieval enforcement
-remain partial or planned.
+Local privacy filtering, assistant-context classification, secure retry
+spooling, project hook wiring, generated-output secret scanning, private runtime
+permissions, and hard-filtered retrieval are implemented for Phase 1. The
+Owner-authorized bounded lifecycle canary exercised the deployed provider path.
 
 Residual risks include upstream source-format drift, incomplete credential
 pattern coverage, original disclosures already present in agent history,

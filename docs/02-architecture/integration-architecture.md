@@ -37,14 +37,14 @@ integrations.
 
 | Integration | Direction | Orca boundary | Current state |
 |---|---|---|---|
-| Codex rollout | Source → Orca | Connector positively identifies supported records and normalizes permitted redacted evidence | Owner-turn slice implemented; assistant context and full drift handling incomplete |
-| Codex lifecycle hooks | Codex → local runtime | Bounded handoff only; semantic work belongs to one-shot worker | Planned |
-| Semantic provider | Processor ↔ provider | Receives minimized bounded redacted input; returns untrusted controlled proposals | One Continuation Summary seam implemented |
-| Configured Orca vault | Storage ↔ filesystem | Storage maps logical artifacts to approved locations and publishes recoverably | Initial summary/Manifest slice implemented |
-| AgentCairn | Orca ↔ replaceable adapter | May distil prevalidated input and index permitted Markdown; never owns authority or canonical apply | Adapter tested, not wired |
-| MCP and explicit skills | Agent ↔ Recall/runtime | Local private invocation for recall, save, and review workflows | Planned |
-| Local host configuration | Operator → Governance | Supplies validated machine-specific paths, mappings, and policies outside Git | Example only; loader planned |
-| Optional SQLite projections | Manifests/Markdown → local cache | Accelerate lookup only; disposable and rebuildable | Planned |
+| Codex rollout | Source → Orca | Connector positively identifies supported records and normalizes permitted redacted evidence | Implemented; unsupported format drift fails closed |
+| Codex lifecycle hooks | Codex → local runtime | Bounded handoff only; semantic work belongs to one-shot worker | Implemented, installed, and bounded canary passed |
+| Semantic provider | Processor ↔ provider | Receives minimized bounded redacted input; returns untrusted controlled proposals | Implemented through the configured `codex-cli` adapter |
+| Configured Orca vault | Storage ↔ filesystem | Storage maps logical artifacts to approved locations and publishes recoverably | Implemented for Phase 1 artifacts and recovery intents |
+| AgentCairn | Orca ↔ replaceable adapter | May distil prevalidated input and index permitted Markdown; never owns authority or canonical apply | Governed distiller and retrieval adapters implemented |
+| MCP and explicit skills | Agent ↔ Recall/runtime | Local private invocation for recall, save, and review workflows | Explicit local CLI implemented; no public MCP endpoint |
+| Local host configuration | Operator → Governance | Supplies validated machine-specific paths, mappings, and policies outside Git | Strict loader and safe example implemented |
+| Optional SQLite projections | Manifests/Markdown → local cache | Accelerate lookup only; disposable and rebuildable | Optional and unused; filesystem remains the correctness baseline |
 
 ## Codex source integration
 
@@ -81,7 +81,9 @@ parallel with Orca unless separately allowlisted and governance-adapted.
 
 ## MCP and skill integration
 
-Phase 1 intends local explicit surfaces for recall, save, and conflict review.
+Phase 1 provides local explicit CLI surfaces for Recall, save handoff, status,
+and rebuild. Conflict and candidate disposition remain in their owning explicit
+workflows.
 Invocation does not grant authority: each action still passes Governance and
 Storage constraints. Startup automatically loads only interaction guidance;
 semantic memory recall requires explicit invocation.

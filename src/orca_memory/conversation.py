@@ -124,6 +124,12 @@ def normalize_codex_rollout(
     )
 
 
+def codex_session_metadata(rollout_path: Path) -> dict[str, Any]:
+    """Read the validated first session metadata object for local governance."""
+
+    return dict(_read_session_metadata(rollout_path))
+
+
 def _read_session_metadata(path: Path) -> dict[str, Any]:
     with path.open("rb") as handle:
         for line_number, raw_line in enumerate(handle, start=1):

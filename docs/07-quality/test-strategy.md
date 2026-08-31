@@ -136,7 +136,7 @@ Scenario definitions and verdicts remain in the
 | `tests/memory/test_conflicts.py` | 6 | AGENTS and CI | Stable variants, conflict review states, overflow, support, supersession lineage, and Owner-only resolution |
 | `tests/candidates/test_candidates.py` | 9 | AGENTS and CI | Ordinary candidate schema, kinds, scopes, placement, support, terminal dispositions, receipts, and recall exclusion |
 | `tests/project/test_registry.py` | 9 | AGENTS and CI | Stable project identity, exact mapping, Owner choice, Unassigned, registration, relink, and exact-worktree reuse |
-| `tests/project/test_mapping_publication.py` | 4 | AGENTS and CI | Intent-first project registration/relink recovery, mismatch handling, and content-free orphan detection |
+| `tests/project/test_mapping_publication.py` | 5 | AGENTS and CI | Intent-first project registration/relink recovery, configured-host binding, mismatch handling, and content-free orphan detection |
 | `tests/step3/test_typed_pipeline.py` | 5 | AGENTS and CI | Typed add/support/update, stable identity, Project Summary refresh, joined receipts, and interrupted recovery |
 | `tests/step3/test_segmentation.py` | 11 | AGENTS and CI | Accepted budgets, conservative estimation, UTF-8 segments, chronological chunks, context measurement, and related-record bounds |
 | `tests/step3/test_processor_budgets.py` | 5 | AGENTS and CI | Pre-call context rejection, optional overlap removal, bounded records, output ceiling, and project-context scope |
@@ -149,16 +149,20 @@ Scenario definitions and verdicts remain in the
 | `tests/interaction/test_pipeline.py` | 2 | AGENTS and CI | Exact-source Manifest admission, content-free abstention, replay, profile rebuild, text exclusion, and deterministic selection |
 | `tests/retrieval/test_retrieval.py` | 11 | AGENTS and CI | Projection/hash validation, hard filters, conflicts, relevance/authority ordering, duplicate collapse, exact conversation, budgets, governed AgentCairn ranking, and disposable-index recovery |
 | `tests/config/test_configuration.py` | 12 | AGENTS and CI | Strict schemas, precedence, paths, policy versions, default-off lifecycle toggle, budgets, provider registration, project mappings, examples, and ignored local state |
-| `tests/runtime/test_runtime.py` | 4 | AGENTS and CI | Hook deduplication, private spool cleanup, one-shot lock, three-attempt failure, content-free attention, catch-up, and idle behavior |
-| `tests/runtime/test_attention.py` | 4 | AGENTS and CI | Accepted attention sources, content-free stable views, rebuild, safe routes, and once-per-session reminders |
-| `tests/runtime/test_application.py` | 6 | AGENTS and CI | Isolated process/restart/rebuild/guidance/Recall loop, configured budgets, no automatic Recall, no canonical write, and local CLI lifecycle |
+| `tests/runtime/test_runtime.py` | 14 | AGENTS and CI | Hook deduplication, private spool cleanup, bounded queue drain, one-shot lock, retries, content-free attention, cursors, scope choices, catch-up, and idle behavior |
+| `tests/runtime/test_attention.py` | 7 | AGENTS and CI | Accepted attention sources, pending and orphan recovery state, content-free stable views, rebuild, safe routes, and once-per-session reminders |
+| `tests/runtime/test_application.py` | 18 | AGENTS and CI | Isolated process/restart/rebuild/guidance/Recall loop, scope/cursor catch-up, lifecycle guards, Owner-review commands, no automatic Recall, and no canonical write |
+| `tests/runtime/test_owner_review.py` | 12 | AGENTS and CI | Explicit candidate/conflict outcomes, canonical-path and symlink checks, complete receipts, race-safe fixed-intent recovery, overflow cleanup, and no canonical writes |
+| `tests/runtime/test_backup.py` | 7 | AGENTS and CI | Full-vault and essential-runtime boundary, fake-GPG encryption seam, pending/orphan-work blocking, manifest/hash verification, path safety, and staging-only restore |
 | `tests/runtime/test_codex_provider.py` | 4 | AGENTS and CI | Ephemeral exact-model Codex CLI invocation, standard-input containment, structured proposal validation, and content-free failure behavior |
-| `tests/runtime/test_codex_hook.py` | 9 | AGENTS and CI | Official lifecycle payloads, default-off no-op before transcript access, source containment, mandatory redacted handoff, segment-aware replay, exact worker settings, safe failures, and hook configuration |
+| `tests/runtime/test_codex_hook.py` | 13 | AGENTS and CI | Official lifecycle payloads, deterministic scope resolution, default-off no-op before transcript access, source containment, mandatory redacted handoff, cursor-aware replay, exact worker settings, safe failures, and hook configuration |
 | `tests/acceptance/test_readiness_boundaries.py` | 7 | AGENTS and CI | Frozen corpus distribution and digests, selector-backed execution, fail-closed scoring, separate edge set, and negative canonical/public surface |
 | `tests/acceptance/test_semantic_evaluation.py` | 5 | AGENTS and CI | Strict synthetic semantic manifest, separate usefulness/validity/safety scoring, allowed extras, content-safe failures, and immutable result retention |
 
-This 185-test inventory is a current regression baseline, not the complete Phase
-1 suite and not end-to-end acceptance.
+This inventory records the suites and their intended coverage. The canonical
+command below is the current regression baseline; its test count changes when
+the listed suites change. It is not the complete Phase 1 suite and not
+end-to-end acceptance.
 
 ## Current and target commands
 
@@ -189,6 +193,8 @@ uv run --extra agentcairn python -m unittest \
   tests/runtime/test_runtime.py \
   tests/runtime/test_attention.py \
   tests/runtime/test_application.py \
+  tests/runtime/test_owner_review.py \
+  tests/runtime/test_backup.py \
   tests/runtime/test_codex_provider.py \
   tests/runtime/test_codex_hook.py \
   tests/acceptance/test_readiness_boundaries.py \
@@ -196,9 +202,10 @@ uv run --extra agentcairn python -m unittest \
   tests/agentcairn/test_distiller.py
 ```
 
-This exact command passed all 185 current tests on 2026-08-30. That verifies the
-command and current regression baseline only; it does not satisfy the complete
-Phase 1 acceptance scenarios.
+The current baseline command passed 228 tests on 2026-08-31. A passing command verifies the
+deterministic regression baseline only; it does not satisfy the complete Phase
+1 acceptance scenarios, a real GPG backup, or an exact-revision lifecycle
+canary.
 
 New deterministic Phase 1 suites must be added to this command and CI as their
 milestones land. A later quality update may replace explicit paths with
@@ -243,6 +250,13 @@ privacy, storage, retrieval, recovery, or deployment behavior.
   host-config, verification, and intent cleanup. Prove stable identity, exact
   worktree-only automatic reuse, Owner choice for clones and moves, and no vault
   or Manifest leakage of host paths or Git evidence.
+- Fault-inject candidate and conflict Owner-review receipts, target post-images,
+  overflow cleanup, intent cleanup, identity/path/hash mismatches, and recovery;
+  prove no semantic call or canonical write occurs.
+- Verify encrypted backup boundaries with a fake GPG runner and, separately,
+  test private file permissions, allowed archive roots, manifest/member hashes,
+  pending-work blocking, and staging-only restore without live mutation. A real
+  GPG backup is a deployment verification step, not a hermetic test requirement.
 - Test lock contention, duplicate triggers, source revision, policy revision,
   retry exhaustion, retention expiry, restart, checkpoint loss, index loss,
   stale projection, and hash mismatch.
@@ -303,11 +317,13 @@ privacy, storage, retrieval, recovery, or deployment behavior.
 - A historical canary or `PASS — SMALL SAMPLE` label remains limited to its
   recorded sample and never substitutes for the current phase gate.
 
-## Adoption gaps
+## Current implementation evidence
 
-- Interaction, retrieval, runtime, attention, and complete-loop contracts do
-  not yet have active implementation tests.
-- No current local-runtime end-to-end or operational canary proves Phase 1.
+- Interaction, retrieval, runtime, attention, and complete-loop contracts have
+  active deterministic implementation tests in the canonical suite.
+- The accepted local-runtime lifecycle canary remains evidence only for its
+  authorized two-turn sample and exact recorded environment; it does not prove
+  broad semantic usefulness or a different revision.
 
 ## Related documents
 
