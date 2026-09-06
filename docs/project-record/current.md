@@ -73,8 +73,21 @@ vault. With checkout and extracted download hidden and networking disabled,
 installed Recall and the retained vault scaffolder passed. A real-wheel folder
 entry defect found by that check was fixed and added to the fixture coverage.
 
-The package is prepared for the `v0.1.0` GitHub prerelease for controlled testing.
-The release workflow runs the suite and real archive check before publication.
+The [v0.1.0 prerelease](https://github.com/brightskye/orca/releases/tag/v0.1.0)
+is published for controlled testing from source revision
+`378808849a99415654664b3e43565017a9b57450`. The
+[GitHub release checks](https://github.com/brightskye/orca/actions/runs/34032988748)
+passed the active suite, real archive installation, and synthetic vault-move
+check before publication. The downloaded release then passed the local masked
+checkout, Recall, and retained-scaffolder checks.
+
+Published archive SHA-256:
+`bfc46c55c74611f4d9d1cc5011703520a28bd8e9bf2fc04c7abe2bbfed62ddb6`.
+Its manifest identifies a clean source revision. Rebuilding with GitHub's
+`uv 0.12.10` produced an identical archive. An earlier local build with
+`uv 0.12.5` differed only in wheel generator metadata, its RECORD entry, and
+the resulting hashes; program code and bundled resources matched throughout.
+
 Controlled Codex Desktop lifecycle verification and authorization for routine
 private capture remain outstanding; packaging does not change those limits.
 
