@@ -1,0 +1,44 @@
+{
+  "description": "User-level Orca Phase 1 lifecycle handoff for mapped repositories.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -n \"$ORCA_CHECKOUT\" && test -f \"$ORCA_CHECKOUT/pyproject.toml\" && test -f \"$ORCA_HOST_CONFIG\" && uv run --project \"$ORCA_CHECKOUT\" --no-sync orca-codex-hook",
+            "timeout": 10,
+            "statusMessage": "Loading Orca interaction guidance"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -n \"$ORCA_CHECKOUT\" && test -f \"$ORCA_CHECKOUT/pyproject.toml\" && test -f \"$ORCA_HOST_CONFIG\" && uv run --project \"$ORCA_CHECKOUT\" --no-sync orca-codex-hook",
+            "timeout": 10,
+            "statusMessage": "Queueing bounded Orca capture"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "other",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "test -n \"$ORCA_CHECKOUT\" && test -f \"$ORCA_CHECKOUT/pyproject.toml\" && test -f \"$ORCA_HOST_CONFIG\" && uv run --project \"$ORCA_CHECKOUT\" --no-sync orca-codex-hook",
+            "timeout": 3,
+            "statusMessage": "Spooling bounded Orca capture"
+          }
+        ]
+      }
+    ]
+  }
+}

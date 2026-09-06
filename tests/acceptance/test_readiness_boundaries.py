@@ -8,7 +8,7 @@ import unittest
 
 import yaml
 
-from orca_memory.evaluation import (
+from tests.evals.evaluation import (
     COMMON_CATEGORY_COUNTS,
     COMMON_RUBRIC,
     EDGE_ACCEPTED_OUTCOMES,
@@ -33,7 +33,7 @@ VERSIONS = {
 
 class ReadinessBoundaryTests(unittest.TestCase):
     def test_common_use_is_exactly_100_selector_backed_cases_and_frozen(self) -> None:
-        path = ROOT / "evals/common-use/candidate-v1.yaml"
+        path = ROOT / "tests/evals/common-use/candidate-v1.yaml"
         value = validate_common_use_candidate(path)
         cases = [
             case
@@ -49,7 +49,7 @@ class ReadinessBoundaryTests(unittest.TestCase):
         self.assertEqual(frozen_sha256(path), value["approval"]["frozen_sha256"])
 
     def test_edge_set_is_exactly_12_selector_backed_cases_and_frozen(self) -> None:
-        path = ROOT / "evals/edge-safety/candidate-v1.yaml"
+        path = ROOT / "tests/evals/edge-safety/candidate-v1.yaml"
         value = validate_edge_safety_candidate(path)
         self.assertEqual(len(value["cases"]), 12)
         self.assertEqual(
@@ -63,7 +63,7 @@ class ReadinessBoundaryTests(unittest.TestCase):
         self.assertEqual(frozen_sha256(path), value["approval"]["frozen_sha256"])
 
     def test_frozen_digest_omits_only_its_own_field(self) -> None:
-        source = ROOT / "evals/common-use/candidate-v1.yaml"
+        source = ROOT / "tests/evals/common-use/candidate-v1.yaml"
         value = yaml.safe_load(source.read_text(encoding="utf-8"))
         changed_digest = deepcopy(value)
         changed_digest["approval"]["frozen_sha256"] = "0" * 64
@@ -75,7 +75,7 @@ class ReadinessBoundaryTests(unittest.TestCase):
                 validate_common_use_candidate(path)
 
     def test_manifest_mutation_and_schema_drift_fail_closed(self) -> None:
-        source = ROOT / "evals/edge-safety/candidate-v1.yaml"
+        source = ROOT / "tests/evals/edge-safety/candidate-v1.yaml"
         value = yaml.safe_load(source.read_text(encoding="utf-8"))
         value["cases"][0]["scenario"] = "changed-scenario"
         value["unexpected"] = "not-accepted"
@@ -85,7 +85,7 @@ class ReadinessBoundaryTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 validate_edge_safety_candidate(path)
 
-        common_source = ROOT / "evals/common-use/candidate-v1.yaml"
+        common_source = ROOT / "tests/evals/common-use/candidate-v1.yaml"
         common = yaml.safe_load(common_source.read_text(encoding="utf-8"))
         common["rubric"]["overall_minimum"] = 0.90
         with tempfile.TemporaryDirectory() as directory:
@@ -106,10 +106,10 @@ class ReadinessBoundaryTests(unittest.TestCase):
 
     def test_frozen_sets_run_separately_and_return_content_safe_results(self) -> None:
         common = run_common_use_evaluation(
-            ROOT / "evals/common-use/candidate-v1.yaml", **VERSIONS
+            ROOT / "tests/evals/common-use/candidate-v1.yaml", **VERSIONS
         )
         edge = run_edge_safety_evaluation(
-            ROOT / "evals/edge-safety/candidate-v1.yaml", **VERSIONS
+            ROOT / "tests/evals/edge-safety/candidate-v1.yaml", **VERSIONS
         )
         self.assertTrue(common["passed"])
         self.assertEqual(common["overall"]["total"], 100)

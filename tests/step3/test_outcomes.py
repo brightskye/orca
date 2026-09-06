@@ -55,6 +55,7 @@ def _add() -> RecordProposal:
         scope_id="general",
         current="Use the Manifest scan.",
         source_updated_at="2026-08-30T09:00:00Z",
+        source_segment_refs=("turn-add#1",),
     )
 
 
@@ -68,6 +69,7 @@ def _conflict(label: str, position: str, at: str) -> ConflictProposal:
         label=label,
         position=position,
         position_at=at,
+        source_segment_refs=("turn-conflict#1",),
     )
 
 
@@ -114,14 +116,24 @@ class OutcomePipelineTests(unittest.TestCase):
             provider.proposal = ProcessingProposal(
                 None,
                 conflict_proposals=(
-                    _conflict("Both", "Use both scan and SQLite.", "2026-08-30T11:00:00Z"),
+                    ConflictProposal(
+                        **{
+                            **_conflict("Both", "Use both scan and SQLite.", "2026-08-30T11:00:00Z").__dict__,
+                            "source_segment_refs": ("turn-third#1",),
+                        }
+                    ),
                 ),
             )
             pipeline.run(_batch("turn-third"), scope=scope)
             provider.proposal = ProcessingProposal(
                 None,
                 conflict_proposals=(
-                    _conflict("Remote", "Use a remote index.", "2026-08-30T12:00:00Z"),
+                    ConflictProposal(
+                        **{
+                            **_conflict("Remote", "Use a remote index.", "2026-08-30T12:00:00Z").__dict__,
+                            "source_segment_refs": ("turn-overflow#1",),
+                        }
+                    ),
                 ),
             )
             overflow_result = pipeline.run(_batch("turn-overflow"), scope=scope)
@@ -153,7 +165,11 @@ class OutcomePipelineTests(unittest.TestCase):
             )
             provider.proposal = ProcessingProposal(
                 None,
-                candidate_operations=(CandidateInstruction("create", candidate_proposal),),
+                candidate_operations=(
+                    CandidateInstruction(
+                        "create", candidate_proposal, source_segment_refs=("turn-candidate#1",)
+                    ),
+                ),
             )
             created = pipeline.run(_batch("turn-candidate"), scope=scope)
             candidate_path = next((root / "vault").glob("**/candidates/knowledge/**/*.md"))
@@ -163,7 +179,12 @@ class OutcomePipelineTests(unittest.TestCase):
             provider.proposal = ProcessingProposal(
                 None,
                 candidate_operations=(
-                    CandidateInstruction("support", candidate_proposal, candidate.candidate_id),
+                    CandidateInstruction(
+                        "support",
+                        candidate_proposal,
+                        candidate.candidate_id,
+                        ("turn-support#1",),
+                    ),
                 ),
             )
             before = candidate_path.read_bytes()
@@ -204,6 +225,7 @@ class OutcomePipelineTests(unittest.TestCase):
                         scope_id="general",
                         current="Use the receipt-backed SQLite projection.",
                         source_updated_at="2026-08-30T13:00:00Z",
+                        source_segment_refs=("turn-supersede#1",),
                     ),
                 ),
             )
@@ -222,9 +244,9 @@ class OutcomePipelineTests(unittest.TestCase):
             scope = MemoryScope("general", "general")
             pipeline.run(_batch("turn-add"), scope=scope)
             for turn_id, proposal in (
-                ("turn-v2", _conflict("SQLite", "Use only SQLite.", "2026-08-30T10:00:00Z")),
-                ("turn-v3", _conflict("Both", "Use both scan and SQLite.", "2026-08-30T11:00:00Z")),
-                ("turn-v4", _conflict("Remote", "Use a remote index.", "2026-08-30T12:00:00Z")),
+                ("turn-v2", ConflictProposal(**{**_conflict("SQLite", "Use only SQLite.", "2026-08-30T10:00:00Z").__dict__, "source_segment_refs": ("turn-v2#1",)})),
+                ("turn-v3", ConflictProposal(**{**_conflict("Both", "Use both scan and SQLite.", "2026-08-30T11:00:00Z").__dict__, "source_segment_refs": ("turn-v3#1",)})),
+                ("turn-v4", ConflictProposal(**{**_conflict("Remote", "Use a remote index.", "2026-08-30T12:00:00Z").__dict__, "source_segment_refs": ("turn-v4#1",)})),
             ):
                 provider.proposal = ProcessingProposal(None, conflict_proposals=(proposal,))
                 pipeline.run(_batch(turn_id), scope=scope)
@@ -238,9 +260,10 @@ class OutcomePipelineTests(unittest.TestCase):
                             **_conflict(
                                 "Remote",
                                 "Use a remote index.",
-                                "2026-08-30T12:00:00Z",
+                                "2026-08-30T10:00:00Z",
                             ).__dict__,
                             "target_variant_id": "v4",
+                            "source_segment_refs": ("turn-v4-support#1",),
                         }
                     ),
                 ),
@@ -250,6 +273,73 @@ class OutcomePipelineTests(unittest.TestCase):
             operation = json.loads(result.manifest_path.read_text())["operations"][0]
             self.assertEqual(operation["artifact_kind"], "conflict-overflow-candidate")
             self.assertEqual((operation["operation"], operation["outcome"]), ("support", "supported"))
+
+    def test_composed_pipeline_passes_pending_candidate_to_next_provider_call(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            candidate_proposal = CandidateProposal(
+                candidate_kind="fact",
+                subject="A pending fact",
+                proposal="Review this fact before canonicalization.",
+                scope="general",
+                scope_id="general",
+            )
+
+            class CandidateProvider(MutableProvider):
+                def __init__(self) -> None:
+                    super().__init__(
+                        ProcessingProposal(
+                            None,
+                            candidate_operations=(
+                                CandidateInstruction(
+                                    "create",
+                                    candidate_proposal,
+                                    source_segment_refs=("turn-candidate#1",),
+                                ),
+                            ),
+                        )
+                    )
+                    self.requests = []
+
+                def distill(self, request):
+                    self.requests.append(request)
+                    if len(self.requests) == 1:
+                        return self.proposal
+                    candidate = request.related_candidates[0]
+                    return ProcessingProposal(
+                        None,
+                        candidate_operations=(
+                            CandidateInstruction(
+                                "support",
+                                candidate.to_proposal(),
+                                candidate.candidate_id,
+                                ("turn-support#1",),
+                            ),
+                        ),
+                    )
+
+            provider = CandidateProvider()
+            values = iter(("run-candidate", "candidate", "run-support"))
+            pipeline = Step3Pipeline(
+                Processor(provider),
+                Storage(
+                    root / "vault",
+                    root / "runtime",
+                    clock=lambda: datetime(2026, 8, 30, 12, tzinfo=timezone.utc),
+                    id_factory=lambda: next(values),
+                ),
+            )
+            scope = MemoryScope("general", "general")
+            pipeline.run(_batch("turn-candidate"), scope=scope)
+            result = pipeline.run(_batch("turn-support"), scope=scope)
+
+            self.assertEqual(len(provider.requests[1].related_candidates), 1)
+            self.assertEqual(
+                provider.requests[1].related_candidates[0].candidate_id,
+                "cand_candidate",
+            )
+            operation = json.loads(result.manifest_path.read_text())["operations"][0]
+            self.assertEqual((operation["operation"], operation["outcome"]), ("candidate", "no-change"))
 
 
 if __name__ == "__main__":

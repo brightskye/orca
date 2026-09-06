@@ -17,7 +17,7 @@ from orca_memory.processor import (
     ContinuationSummary,
     ProcessingProposal,
 )
-from orca_memory.semantic_evaluation import (
+from tests.evals.semantic_evaluation import (
     frozen_sha256,
     run_semantic_evaluation,
     validate_semantic_manifest,
@@ -25,7 +25,7 @@ from orca_memory.semantic_evaluation import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
-DATASET = ROOT / "evals/semantic/frozen-v1.yaml"
+DATASET = ROOT / "tests/evals/semantic/frozen-v1.yaml"
 PROVIDER_NAME = "codex-cli/gpt-5.6-luna/xhigh"
 
 
@@ -58,6 +58,7 @@ def _proposals(manifest: dict) -> dict[str, ProcessingProposal]:
                         scope="general",
                         scope_id="general",
                         current="Signed release tags are required before deployment.",
+                        source_segment_refs=(f"{case_id}-turn-1#1",),
                     ),
                 ),
             )
@@ -72,6 +73,7 @@ def _proposals(manifest: dict) -> dict[str, ProcessingProposal]:
                         scope="general",
                         scope_id="general",
                         current="Derived summaries remain noncanonical Markdown.",
+                        source_segment_refs=(f"{case_id}-turn-1#1",),
                     ),
                 ),
             )
@@ -89,7 +91,13 @@ def _proposals(manifest: dict) -> dict[str, ProcessingProposal]:
             )
             result[marker] = ProcessingProposal(
                 None,
-                candidate_operations=(CandidateInstruction("create", proposal),),
+                candidate_operations=(
+                    CandidateInstruction(
+                        "create",
+                        proposal,
+                        source_segment_refs=(f"{case_id}-turn-1#1",),
+                    ),
+                ),
             )
         elif case_id == "interaction-feedback":
             turns = case["input"]["turns"]

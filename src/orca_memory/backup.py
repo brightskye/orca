@@ -20,6 +20,7 @@ import stat
 import subprocess
 import tarfile
 import tempfile
+from collections.abc import Iterable
 from typing import Callable
 
 from orca_memory.runtime import SCOPE_CHOICE_SCHEMA, SOURCE_CURSOR_SCHEMA
@@ -160,6 +161,7 @@ def decrypt_backup_to_staging(
     staging_path: Path | None = None,
     vault_root: Path | None = None,
     runtime_root: Path | None = None,
+    project_roots: Iterable[Path] = (),
     gpg_executable: str = "gpg",
     command_runner: CommandRunner | None = None,
 ) -> Path:
@@ -167,14 +169,16 @@ def decrypt_backup_to_staging(
 
     The destination must not already exist.  When the live ``vault_root`` and
     ``runtime_root`` are supplied, the destination and temporary workspace are
-    also checked to be outside both roots.  This makes it impossible for a
-    restore to overwrite a live vault or runtime, and keeps all files hidden
-    in a private temporary directory until manifest and content hashes pass.
+    also checked to be outside both roots.  ``project_roots`` adds configured
+    checkout boundaries; detected Git worktree roots are protected as well.
+    This makes it impossible for a restore to overwrite a live vault or
+    runtime, and keeps all files hidden in a private temporary directory until
+    manifest and content hashes pass.
     """
 
     backup = _validate_backup_path(backup_path)
     _validate_gpg_executable(gpg_executable)
-    protected_roots = _protected_roots(vault_root, runtime_root)
+    protected_roots = _protected_roots(vault_root, runtime_root, project_roots)
     destination = _validate_staging_path(staging_path, protected_roots)
     workspace = _temporary_verification_workspace(protected_roots)
     published = False
@@ -195,6 +199,7 @@ def decrypt_backup_to_staging(
             os.chmod(destination, 0o700)
             if destination.is_symlink():
                 raise BackupIntegrityError("restore staging path is a symlink")
+            _assert_outside_protected(destination, protected_roots)
         else:
             destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
             os.rename(hidden, destination)
@@ -259,9 +264,18 @@ def _validate_staging_path(
     if staging_path.exists() or staging_path.is_symlink():
         raise BackupError("staging_path must not already exist")
     destination = staging_path.resolve(strict=False)
-    if any(root == destination or root in destination.parents for root in protected_roots):
-        raise BackupError("staging_path must be outside vault and runtime")
+    _assert_outside_protected(destination, protected_roots)
     return destination
+
+
+def _assert_outside_protected(
+    destination: Path,
+    protected_roots: tuple[Path, ...],
+) -> None:
+    worktree_root = _git_worktree_root(destination)
+    boundaries = protected_roots + ((worktree_root,) if worktree_root is not None else ())
+    if any(root == destination or root in destination.parents for root in boundaries):
+        raise BackupError("staging_path must be outside protected roots")
 
 
 def _validate_recipient(recipient: str) -> None:
@@ -280,6 +294,9 @@ def _temporary_workspace(vault: Path, runtime: Path):
     if path == vault or vault in path.parents or path == runtime or runtime in path.parents:
         workspace.cleanup()
         raise BackupError("temporary backup workspace overlaps a source root")
+    if _git_worktree_root(path) is not None:
+        workspace.cleanup()
+        raise BackupError("temporary backup workspace overlaps a Git worktree")
     os.chmod(path, 0o700)
     return workspace
 
@@ -290,6 +307,9 @@ def _temporary_verification_workspace(protected_roots: tuple[Path, ...] = ()):
     if any(root == path or root in path.parents for root in protected_roots):
         workspace.cleanup()
         raise BackupError("temporary verification workspace overlaps a protected root")
+    if _git_worktree_root(path) is not None:
+        workspace.cleanup()
+        raise BackupError("temporary verification workspace overlaps a Git worktree")
     os.chmod(workspace.name, 0o700)
     return workspace
 
@@ -297,6 +317,7 @@ def _temporary_verification_workspace(protected_roots: tuple[Path, ...] = ()):
 def _protected_roots(
     vault_root: Path | None,
     runtime_root: Path | None,
+    project_roots: Iterable[Path] = (),
 ) -> tuple[Path, ...]:
     roots: list[Path] = []
     for label, root in (("vault_root", vault_root), ("runtime_root", runtime_root)):
@@ -308,11 +329,108 @@ def _protected_roots(
         if not resolved.is_dir():
             raise BackupError(f"{label} must be a directory")
         roots.append(resolved)
-    if len(roots) == 2 and (roots[0] == roots[1] or roots[0] in roots[1].parents or roots[1] in roots[0].parents):
+
+    live_roots = tuple(roots)
+    for index, root in enumerate(project_roots):
+        if not isinstance(root, Path) or not root.is_absolute():
+            raise BackupError(f"project_roots[{index}] must be an absolute path")
+        try:
+            roots.append(root.resolve(strict=False))
+        except OSError as exc:
+            raise BackupError(f"project_roots[{index}] cannot be normalized") from exc
+
+    # A runtime may live in a checkout for compatibility with the existing
+    # local layout.  Its Git root is protected as a staging boundary without
+    # rejecting the runtime itself.
+    for root in tuple(roots):
+        worktree_root = _git_worktree_root(root)
+        if worktree_root is not None:
+            roots.append(worktree_root)
+
+    if len(live_roots) == 2 and (
+        live_roots[0] == live_roots[1]
+        or live_roots[0] in live_roots[1].parents
+        or live_roots[1] in live_roots[0].parents
+    ):
         raise BackupError("vault and runtime roots must be separate")
     return tuple(roots)
 
 
+def _git_worktree_root(path: Path) -> Path | None:
+    """Find one valid Git worktree boundary containing ``path``.
+
+    Empty ``.git`` directories are ignored as insufficient evidence.  A
+    linked-worktree ``.git`` file and a normal marker with its core entries are
+    accepted.  Partial or unreadable markers fail closed.
+    """
+
+    probe = path
+    while not probe.exists() and not probe.is_symlink() and probe != probe.parent:
+        probe = probe.parent
+    for candidate in (probe, *probe.parents):
+        marker = candidate / ".git"
+        try:
+            marker_info = marker.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise BackupError("cannot inspect Git worktree boundary") from exc
+        if stat.S_ISLNK(marker_info.st_mode):
+            try:
+                marker = marker.resolve(strict=True)
+                marker_info = marker.stat()
+            except OSError as exc:
+                raise BackupError("Git worktree marker is unreadable") from exc
+        if stat.S_ISREG(marker_info.st_mode):
+            try:
+                lines = marker.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeError) as exc:
+                raise BackupError("Git worktree marker is unreadable") from exc
+            if len(lines) != 1 or not lines[0].startswith("gitdir: "):
+                raise BackupError("ambiguous Git worktree marker")
+            raw_gitdir = lines[0][len("gitdir: ") :].strip()
+            if not raw_gitdir or "\x00" in raw_gitdir:
+                raise BackupError("ambiguous Git worktree marker")
+            gitdir = Path(raw_gitdir)
+            if not gitdir.is_absolute():
+                gitdir = candidate / gitdir
+            try:
+                if not gitdir.resolve(strict=True).is_dir():
+                    raise BackupError("Git worktree marker is unreadable")
+            except OSError as exc:
+                raise BackupError("Git worktree marker is unreadable") from exc
+            try:
+                return Path(os.path.normcase(str(candidate.resolve(strict=True))))
+            except OSError as exc:
+                raise BackupError("Git worktree root is unreadable") from exc
+        if not stat.S_ISDIR(marker_info.st_mode):
+            raise BackupError("ambiguous Git worktree marker")
+
+        expected = {"HEAD": stat.S_ISREG, "config": stat.S_ISREG,
+                    "objects": stat.S_ISDIR, "refs": stat.S_ISDIR}
+        present = False
+        valid = True
+        found: set[str] = set()
+        for name, kind in expected.items():
+            entry = marker / name
+            try:
+                info = entry.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise BackupError("Git worktree marker is unreadable") from exc
+            present = True
+            found.add(name)
+            valid = valid and not stat.S_ISLNK(info.st_mode) and kind(info.st_mode)
+        if not present:
+            continue
+        if not valid or found != set(expected):
+            raise BackupError("ambiguous Git worktree marker")
+        try:
+            return Path(os.path.normcase(str(candidate.resolve(strict=True))))
+        except OSError as exc:
+            raise BackupError("Git worktree root is unreadable") from exc
+    return None
 def _reject_pending_runtime(runtime: Path) -> None:
     for root_name in _PENDING_ROOTS:
         root = runtime / root_name

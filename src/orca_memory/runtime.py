@@ -13,6 +13,7 @@ import re
 from typing import Callable, Literal
 
 from orca_memory.conversation import ConversationBatch
+from orca_memory.segmentation import BudgetExceededError
 from orca_memory.retry import (
     begin_retry,
     complete_retry,
@@ -350,9 +351,9 @@ class LocalRuntime:
             _write_private(queue_path, attempted.value_dict(), exclusive=False)
             try:
                 handler(attempted, batch)
-            except Exception:
+            except Exception as exc:
                 if attempts >= self.max_attempts:
-                    self._write_failure_receipt(item, attempts)
+                    self._write_failure_receipt(item, attempts, error=exc)
                     queue_path.unlink()
                     return "failed"
                 return "retry"
@@ -518,12 +519,25 @@ class LocalRuntime:
             raise ValueError("runtime clock must return a timezone-aware datetime")
         return now
 
-    def _write_failure_receipt(self, item: WorkItem, attempts: int) -> None:
+    def _write_failure_receipt(
+        self, item: WorkItem, attempts: int, *, error: Exception | None = None,
+    ) -> None:
+        # Persist fixed categories only, never exception text, model output,
+        # or paths. An exhausted attempt may have ended without an exception.
+        if isinstance(error, BudgetExceededError):
+            failure_code = "output-budget" if error.category == "semantic_output_tokens" else "input-budget"
+        elif isinstance(error, ValueError):
+            failure_code = "validation"
+        elif isinstance(error, OSError):
+            failure_code = "filesystem"
+        else:
+            failure_code = "processing" if error is not None else "unobserved"
         receipt = {
             "schema": "orca-runtime-failure/0.1",
             "work_id": item.work_id,
             "reason": "attempts-exhausted",
             "attempts": attempts,
+            "failure_code": failure_code,
         }
         path = self.runtime_root / "receipts" / f"failure-{item.work_id}.json"
         if not path.exists():

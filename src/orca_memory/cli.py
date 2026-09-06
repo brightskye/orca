@@ -28,6 +28,7 @@ from orca_memory.projects import (
     allocate_project_id,
     prepare_registration,
     prepare_relink,
+    resolve_project,
 )
 from orca_memory.retrieval import (
     AgentCairnRetrievalAdapter,
@@ -106,6 +107,11 @@ def main(argv: list[str] | None = None) -> int:
     backup_stage = backup_commands.add_parser("stage")
     backup_stage.add_argument("--source", type=Path, required=True)
     backup_stage.add_argument("--destination", type=Path, required=True)
+    backup_stage.add_argument(
+        "--standalone",
+        action="store_true",
+        help="Recover without host configuration; choose a new destination outside live data and checkouts.",
+    )
     start = commands.add_parser("start")
     start.add_argument("--session-id", required=True)
     start.add_argument("--context", default="general")
@@ -115,6 +121,7 @@ def main(argv: list[str] | None = None) -> int:
     recall.add_argument("question")
     recall.add_argument("--project-id")
     recall.add_argument("--project-alias")
+    recall.add_argument("--scope", choices=("general", "unassigned"))
     recall.add_argument("--include-closed", action="store_true")
     queue = commands.add_parser("queue-pointer")
     queue.add_argument("--trigger", choices=("pre-compact", "explicit-save"), required=True)
@@ -142,6 +149,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     catch_up.add_argument("--max-sources", type=int, default=20)
     args = parser.parse_args(argv)
+    # Recovery must remain available when the installation being recovered is lost.
+    if args.command == "backup" and args.backup_command == "verify":
+        verified = verify_backup(args.source)
+        print(json.dumps({
+            "backup": str(verified.backup_path),
+            "manifest_sha256": verified.manifest_sha256,
+            "member_count": verified.member_count,
+            "total_bytes": verified.total_bytes,
+            "verified": True,
+        }, sort_keys=True))
+        return 0
+    if args.command == "backup" and args.backup_command == "stage" and args.standalone:
+        staged = decrypt_backup_to_staging(args.source, staging_path=args.destination)
+        print(json.dumps({"staged": str(staged), "live_state_changed": False}, sort_keys=True))
+        return 0
     registered_adapters = {CODEX_CLI_ADAPTER, *args.registered_adapter}
     configuration = load_configuration(
         args.host_config,
@@ -343,21 +365,13 @@ def main(argv: list[str] | None = None) -> int:
                 "member_count": summary.member_count,
                 "total_bytes": summary.total_bytes,
             }
-        elif args.backup_command == "verify":
-            verified = verify_backup(args.source)
-            result = {
-                "backup": str(verified.backup_path),
-                "manifest_sha256": verified.manifest_sha256,
-                "member_count": verified.member_count,
-                "total_bytes": verified.total_bytes,
-                "verified": True,
-            }
         else:
             staged = decrypt_backup_to_staging(
                 args.source,
                 staging_path=args.destination,
                 vault_root=vault,
                 runtime_root=runtime,
+                project_roots=tuple(mapping.normalized_root for mapping in configuration.host.project_root_mappings),
             )
             result = {"staged": str(staged), "live_state_changed": False}
         print(json.dumps(result, sort_keys=True))
@@ -402,6 +416,20 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps({"guidance": guidance, "reminder": reminder}, sort_keys=True))
         return 0
     if args.command == "recall":
+        project_id = args.project_id
+        if project_id is None and args.project_alias is None and args.scope is None:
+            cwd = Path.cwd()
+            workspace_root = next(
+                (path for path in (cwd, *cwd.parents) if (path / ".git").exists()),
+                cwd,
+            )
+            resolution = resolve_project(
+                workspace_root,
+                configuration.host.project_root_mappings,
+                configuration.project_registry,
+            )
+            if resolution.status == "mapped":
+                project_id = resolution.project_id
         index = load_projection_index(runtime, vault)
 
         def resolve(alias: str) -> str | None:
@@ -419,8 +447,9 @@ def main(argv: list[str] | None = None) -> int:
         ).recall(
             RecallRequest(
                 args.question,
-                project_id=args.project_id,
+                project_id=project_id,
                 project_alias=args.project_alias,
+                scope=args.scope,
                 include_closed=args.include_closed,
                 max_results=configuration.vault.budgets.recall.max_results,
             )

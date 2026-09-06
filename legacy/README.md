@@ -3,7 +3,7 @@
 This directory is a project-specific PDS exception for the retained Orca manual
 prototype. PDS governs project documentation but does not prescribe a storage
 location for historical source code and tests. Keeping the package here avoids
-misclassifying executable material under `docs/_archive/` or active Phase 1
+misclassifying executable material under `docs/archive/` or active Phase 1
 material under `src/` and `tests/`.
 
 ## Contents and authority
@@ -15,7 +15,7 @@ material under `src/` and `tests/`.
 The package is noncurrent implementation evidence. It does not define accepted
 behavior, current status, or future direction. Current project truth is indexed
 in [`docs/README.md`](../docs/README.md); former all-phase design snapshots and
-migration notes are in the [Documentation Archive](../docs/_archive/README.md).
+migration notes are in the [Documentation Archive](../docs/archive/README.md).
 
 Consult this directory only for explicit historical comparison, prototype
 behavior, or legacy migration work.

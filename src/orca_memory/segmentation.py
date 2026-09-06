@@ -20,6 +20,14 @@ SEGMENTATION_POLICY = "orca-segmentation/0.1"
 TOKEN_ESTIMATOR_VERSION = "orca-token-estimator/0.1-byte-conservative"
 
 
+class BudgetExceededError(ValueError):
+    """A named budget was exceeded, without retaining the measured content."""
+
+    def __init__(self, category: str) -> None:
+        self.category = category
+        super().__init__(f"{category} exceeds its configured ceiling")
+
+
 def estimate_tokens(text: str) -> int:
     """Return a deterministic conservative token estimate.
 
@@ -164,7 +172,7 @@ class BudgetUsage:
                 else getattr(budgets, field)
             )
             if getattr(self, field) > limit:
-                raise ValueError(f"{field} exceeds its configured ceiling")
+                raise BudgetExceededError(field)
         if self.total_input_tokens > budgets.total_input_tokens:
             raise ValueError("complete provider input exceeds total_input_tokens")
         return self
@@ -509,6 +517,23 @@ def _related_record_text(record: Any) -> str:
     raise ValueError("related record has no bounded text representation")
 
 
+def _related_candidate_text(candidate: Any) -> str:
+    """Return the bounded semantic text for one pending candidate target."""
+
+    def value(name: str) -> Any:
+        if isinstance(candidate, Mapping):
+            return candidate.get(name)
+        return getattr(candidate, name, None)
+
+    proposal = value("proposal")
+    context = value("context")
+    if not isinstance(proposal, str):
+        raise ValueError("related candidate has no bounded proposal")
+    if isinstance(context, str) and context.strip():
+        return f"{proposal}\n{context}"
+    return proposal
+
+
 def select_related_records(
     records: Iterable[Any],
     scope: Any,
@@ -560,6 +585,7 @@ def measure_context(
     continuation_summary: str = "",
     project_summary: str = "",
     related_records: Iterable[Any] = (),
+    related_candidates: Iterable[Any] = (),
     semantic_output: str = "",
 ) -> BudgetUsage:
     """Measure text categories without applying a provider call."""
@@ -570,6 +596,9 @@ def measure_context(
         raise TypeError("new_evidence must be text or a sequence of text")
     evidence_tokens = sum(estimate_tokens(value) for value in new_evidence)
     related_tokens = sum(estimate_tokens(_related_record_text(value)) for value in related_records)
+    related_tokens += sum(
+        estimate_tokens(_related_candidate_text(value)) for value in related_candidates
+    )
     return BudgetUsage(
         new_evidence_tokens=evidence_tokens,
         preceding_turn_tokens=estimate_tokens(preceding_turn),

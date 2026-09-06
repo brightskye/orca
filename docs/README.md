@@ -1,208 +1,74 @@
----
-id: DOCS-INDEX
-title: Orca Documentation Index
-document_type: documentation-index
-status: accepted
-authority: informative
-implementation_status: not-applicable
-applies_to:
-  - all-phases
-owners:
-  - project-owner
-last_reviewed: 2026-08-31
-documentation_standard: PDS-0.2
-documentation_profile: core
----
+# Orca documentation
 
-# Orca documentation index
+This is the detailed project map for Orca's PLS 0.3 layout. Start at the root
+[`README.md`](../README.md) for project orientation and use the routes below to
+load only the material needed for a task.
 
-## Purpose
+## Project map
 
-This document is the registry, authority map, and reading router for Orca's
-project documentation.
-
-## This document owns
-
-- Documentation navigation and reading routes.
-- The canonical owner for each major subject.
-- The adopted PDS version, profile, and project-specific exceptions.
-
-## This document does not own
-
-- System behavior or implementation status.
-- Project direction, requirements, or architectural decisions.
-
-## Start here
-
-1. Read the root [README](../README.md) for orientation.
-2. Read [Current Status](STATUS.md) for what exists now.
-3. Read the [Roadmap](ROADMAP.md) when phase scope or future direction matters.
-4. Read the [Project Charter](01-foundation/project-charter.md) for stable scope
-   and goals.
-5. Follow the task route below rather than loading every document.
-
-## Canonical ownership
-
-| Subject | Canonical owner |
+| Question | Owner |
 |---|---|
-| Documentation routes and authority map | This document |
-| Current implementation state and divergence | [Current Status](STATUS.md) |
-| Phase direction and future outcomes | [Roadmap](ROADMAP.md) |
-| Project purpose, scope, and constraints | [Project Charter](01-foundation/project-charter.md) |
-| Project requirements | [Requirements](01-foundation/requirements.md) |
-| Domain terminology | [Glossary](01-foundation/glossary.md) |
-| Current system boundaries and component responsibilities | [Architecture Overview](02-architecture/overview.md) |
-| Current Phase 1 architecture | [Architecture Overview](02-architecture/overview.md) |
-| Current runtime and recovery design | [Runtime Architecture](02-architecture/runtime.md) |
-| Deployment topology and location boundaries | [Deployment Architecture](02-architecture/deployment.md) |
-| Data ownership, lifecycle, retention, and rebuildability | [Data Architecture](02-architecture/data-architecture.md) |
-| Security and trust boundaries | [Security and Trust](02-architecture/security-and-trust.md) |
-| Integration and replaceable-adapter boundaries | [Integration Architecture](02-architecture/integration-architecture.md) |
-| Authority, privacy policy, and canonical behavior | [Memory System Contract](governance/memory-system-contract.md) |
-| Capture eligibility, normalization, privacy handoff, and retry behavior | [Capture Pipeline](03-specifications/capture-pipeline.md) |
-| Bounded semantic processing and proposal validation | [Processing Pipeline](03-specifications/processing-pipeline.md) |
-| Memory records, summaries, conflicts, naming, and layout | [Memory Model](03-specifications/memory-model.md) |
-| Ordinary Knowledge Candidate schema, placement, review, and retention | [Knowledge Candidates](03-specifications/knowledge-candidates.md) |
-| Run Manifests, checkpoints, deduplication, and progress recovery | [Provenance Ledger](03-specifications/provenance-ledger.md) |
-| Recall requests, projections, filtering, ranking, and result budgets | [Retrieval Contract](03-specifications/retrieval-contract.md) |
-| Interaction observation and profile lifecycle | [Interaction Preferences](03-specifications/interaction-preferences.md) |
-| Exact compiled presentation guidance | [Interaction Guidance](03-specifications/interaction-guidance.md) |
-| Host and vault configuration fields, defaults, validation, and precedence | [Configuration](03-specifications/configuration.md) |
-| Significant architectural rationale and ADR numbering | [Decision Registry](04-decisions/README.md) |
-| Proposal lifecycle and substantial design-change records | [Proposal Registry](05-proposals/README.md) |
-| Current implementation sequence and milestone progress | [Plan Registry](06-plans/README.md) |
-| Phase 1 acceptance scenarios and phase gate | [Acceptance Plan](07-quality/acceptance.md) |
-| Test levels, suites, fixtures, and evaluation boundaries | [Test Strategy](07-quality/test-strategy.md) |
-| Local installation, configuration, activation, and first verification | [Phase 1 Local Deployment Guide](08-operations/deployment.md) |
-| Vulnerability reporting | Root [Security Policy](../SECURITY.md) |
-| PDS rules for this repository | Root [PDS v0.2](../PDS.md) |
+| Why does Orca exist and what is in scope? | [Project details](project.md) |
+| What happened, what is true now, and what comes next? | [Project Record](project-record/README.md) |
+| How is the solution organized? | [Architecture](architecture/README.md) |
+| Exactly how must Orca behave? | [Specifications](specifications/README.md) |
+| How is Orca verified? | [Quality](quality/README.md) |
+| How is Orca installed, run, diagnosed, and recovered? | [Operations](operations/README.md) |
+| What inactive documentation is retained? | [Archive](archive/README.md) |
 
-All documents registered below have completed their PDS ownership transition.
-Superseded sources are historical under [`docs/_archive/`](_archive/README.md),
-and no current document depends on them for accepted behavior.
+## Subject owners
 
-## Task routes
+| Subject | Owner |
+|---|---|
+| Current implementation and known divergence | [Current](project-record/current.md) |
+| Phase direction and exit criteria | [Roadmap](project-record/roadmap.md) |
+| Decisions and rationale | [Decisions](project-record/decisions/README.md) |
+| Unaccepted substantial changes | [Proposals](project-record/proposals/README.md) |
+| Execution plans | [Plans](project-record/plans/README.md) |
+| Domain language and module boundaries | [Glossary](specifications/glossary.md) |
+| Authority, privacy, capture, recall, and canonical behavior | [Memory system contract](specifications/memory-system-contract.md) |
+| Capture and privacy handoff | [Capture](specifications/capture.md) |
+| Bounded semantic processing | [Processing](specifications/processing.md) |
+| Memory kinds, records, filenames, and lifecycle | [Memory](specifications/memory.md) |
+| Knowledge Candidates | [Knowledge Candidates](specifications/knowledge-candidates.md) |
+| Provenance, manifests, checkpoints, and replay | [Provenance](specifications/provenance.md) |
+| Recall and retrieval projections | [Retrieval](specifications/retrieval.md) |
+| Interaction evidence and profiles | [Interaction Preferences](specifications/interaction-preferences.md) |
+| Compiled presentation guidance | [Interaction Guidance](specifications/interaction-guidance.md) |
+| Host and vault configuration | [Configuration](specifications/configuration.md) |
+| Lifecycle coordination, worker, catch-up, attention, and reminders | [Runtime](specifications/runtime.md) |
+| Backup membership, verification, and staging | [Backup](specifications/backup.md) |
+| Phase 1 acceptance | [Acceptance](quality/acceptance.md) |
+| Test and evaluation mechanics | [Test Strategy](quality/test-strategy.md) |
+| Post-install operation and recovery | [Runbook](operations/runbook.md) |
+| Installation, hook setup, and first controlled test | [Set up Orca](operations/setup.md) |
 
-### Understand the project
+## Reading routes
 
-[Current Status](STATUS.md) → [Roadmap](ROADMAP.md) →
-[Project Charter](01-foundation/project-charter.md) →
-[Architecture Overview](02-architecture/overview.md)
+- To implement or review behavior: [Project details](project.md) →
+  [Architecture](architecture/README.md) → the owning
+  [Specification](specifications/README.md) → relevant code and tests →
+  [Current](project-record/current.md).
+- To investigate an operational failure: [Current](project-record/current.md) →
+  [Operations](operations/README.md) → [Runbook](operations/runbook.md) → the
+  owning specification and tests.
+- To verify a completion claim: [Acceptance](quality/acceptance.md) →
+  [Test Strategy](quality/test-strategy.md) → relevant tests →
+  [Current](project-record/current.md).
+- To change future direction: [Roadmap](project-record/roadmap.md) →
+  [Proposals](project-record/proposals/README.md) →
+  [Decisions](project-record/decisions/README.md) when a choice is accepted.
 
-### Implement or review Phase 1 behavior
+## Noncurrent and local material
 
-[Requirements](01-foundation/requirements.md) →
-[Architecture Overview](02-architecture/overview.md) → the owning specification
-in the registry above → [Phase 1 Implementation Plan](06-plans/completed/phase-1-implementation.md)
-→ [Current Status](STATUS.md)
+Historical documents live under [`archive/`](archive/README.md); historical
+implementation lives under [`legacy/`](../legacy/README.md). Neither is part of
+normal reading unless a task concerns history or migration.
 
-### Investigate a runtime failure
-
-[Current Status](STATUS.md) → [Local Deployment Guide](08-operations/deployment.md) →
-[Local Runbook](08-operations/runbook.md) →
-[Provenance Ledger](03-specifications/provenance-ledger.md) → relevant code and tests
-
-### Verify Phase 1 behavior or completion
-
-[Acceptance Plan](07-quality/acceptance.md) →
-[Test Strategy](07-quality/test-strategy.md) → owning specification → relevant
-code, tests, and retained evidence
-
-### Change memory authority, privacy, or canonical behavior
-
-[Project Charter](01-foundation/project-charter.md) →
-[Requirements](01-foundation/requirements.md) →
-[Memory System Contract](governance/memory-system-contract.md) → affected exact
-contract
-
-### Change domain terminology
-
-[Glossary](01-foundation/glossary.md) → affected requirements, architecture, and
-specifications. Root `CONTEXT.md` is a compatibility pointer only.
-
-### Review future direction
-
-[Roadmap](ROADMAP.md) → [Proposal Registry](05-proposals/README.md). Exact
-later-phase snapshots under [`docs/_archive/legacy-design/`](_archive/README.md#legacy-all-phase-design)
-are historical proposal inputs only and must not be treated as accepted design.
-
-### Review architectural rationale
-
-[Decision Registry](04-decisions/README.md) → the relevant accepted ADR.
-A proposed ADR is review material and does not change accepted architecture or
-specifications.
-
-## Current document registry
-
-| Document | Role | Authority |
-|---|---|---|
-| [Current Status](STATUS.md) | Current project and implementation state | Informative |
-| [Roadmap](ROADMAP.md) | Phase direction and outcomes | Informative |
-| [Project Charter](01-foundation/project-charter.md) | Stable purpose, scope, and constraints | Normative |
-| [Requirements](01-foundation/requirements.md) | Externally meaningful obligations | Normative |
-| [Glossary](01-foundation/glossary.md) | Canonical domain language | Normative |
-| [Architecture Overview](02-architecture/overview.md) | Primary system-design entry point | Normative |
-| [Runtime Architecture](02-architecture/runtime.md) | Runtime and recovery boundaries | Normative |
-| [Deployment Architecture](02-architecture/deployment.md) | Deployment and topology boundaries | Normative |
-| [Data Architecture](02-architecture/data-architecture.md) | Data ownership and lifecycle | Normative |
-| [Security and Trust](02-architecture/security-and-trust.md) | Security boundaries and mitigations | Normative |
-| [Integration Architecture](02-architecture/integration-architecture.md) | External and replaceable seams | Normative |
-| [Specification Index](03-specifications/README.md) | Exact behavior registry and seam map | Informative |
-| [Capture Pipeline](03-specifications/capture-pipeline.md) | Capture interface | Normative |
-| [Processing Pipeline](03-specifications/processing-pipeline.md) | Processing interface | Normative |
-| [Memory Model](03-specifications/memory-model.md) | Memory model specification | Normative |
-| [Knowledge Candidates](03-specifications/knowledge-candidates.md) | Ordinary-candidate schema and lifecycle | Normative |
-| [Provenance Ledger](03-specifications/provenance-ledger.md) | Provenance and checkpoint specification | Normative |
-| [Retrieval Contract](03-specifications/retrieval-contract.md) | Recall and projection interface | Normative |
-| [Interaction Preferences](03-specifications/interaction-preferences.md) | Preference evidence and lifecycle specification | Normative |
-| [Interaction Guidance](03-specifications/interaction-guidance.md) | Guidance compilation specification | Normative |
-| [Configuration](03-specifications/configuration.md) | Host and vault configuration interface | Normative |
-| [Decision Registry](04-decisions/README.md) | ADR navigation, numbering, lifecycle, and applicability | Informative |
-| [ADR-0004](04-decisions/0004-separate-project-workspace-from-vault.md) | Accepted checkout/vault separation rationale | Historical |
-| [Proposal Registry](05-proposals/README.md) | RFC navigation, lifecycle, and noncurrent input boundary | Informative |
-| [RFC-0001](05-proposals/0001-strengthen-run-manifest-provenance.md) | Accepted Run Manifest provenance and recovery proposal record | Informative |
-| [RFC-0002](05-proposals/0002-define-project-registration-and-relinking.md) | Accepted project registration and relinking proposal record | Informative |
-| [RFC-0003](05-proposals/0003-define-human-attention-and-common-use-gate.md) | Accepted human-attention and common-use quality-gate proposal record | Informative |
-| [Plan Registry](06-plans/README.md) | Active/completed plan navigation and lifecycle | Informative |
-| [Phase 1 Implementation Plan](06-plans/completed/phase-1-implementation.md) | Completed Phase 1 sequence and exit criteria | Informative |
-| [Acceptance Plan](07-quality/acceptance.md) | Accepted Phase 1 scenarios and gate | Normative |
-| [Test Strategy](07-quality/test-strategy.md) | Accepted test/evaluation mechanics and suite ownership | Normative |
-| [Phase 1 Local Deployment Guide](08-operations/deployment.md) | Accepted local installation, activation, and first-verification procedure | Normative |
-| [Phase 1 Local Runbook](08-operations/runbook.md) | Accepted truthful local procedures and explicit operational gaps | Normative |
-| [Memory System Contract](governance/memory-system-contract.md) | Governance contract | Normative |
-
-Root `README.md`, `AGENTS.md`, `SECURITY.md`, and `PDS.md` are registered entry
-points outside `docs/`.
-
-## Non-authoritative material
-
-- [`docs/_working/`](_working/README.md) contains temporary migration and review
-  material. It cannot define accepted project truth.
-- [`docs/_archive/`](_archive/README.md) is reserved for inactive historical
-  documentation whose replacement parity and Owner-acceptance gates passed.
-- [`legacy/`](../legacy/README.md) is excluded from normal reading routes and
-  contains noncurrent implementation evidence only.
-- `.agent-notes/`, `evidence/`, `index.md`, and `config/host.yaml` are ignored
-  local records or configuration, not public project authority.
-
-## Project-specific exceptions
-
-`legacy/manual-prototype/` remains outside the PDS documentation tree because
-PDS does not prescribe a location for historical source code and tests. The
-package stays together so its schemas, fixtures, runtime rules, code-adjacent
-contracts, and tests retain their original context. It is owned by the project
-Owner and should be reviewed for removal only after verified Phase 1 cutover and
-provenance preservation in Git history.
-
-The root `PDS.md` is the repository's authoritative adopted copy of PDS-0.2. A
-changelog is not required until an actual release exists.
-
-## Documentation state
-
-The PDS migration is complete. Current control, foundation, architecture,
-specification, decision, plan, quality, and limited-operations documents are
-accepted. RFC-0001, RFC-0002, and RFC-0003 were accepted and promoted; no RFC is
-currently active. Historical
-migration execution evidence remains in the
-non-authoritative
-[migration working set](_working/pds-migration/README.md).
+Private historical evidence and the former local index live under the ignored
+`.local/` area. Temporary agent conversation notes live under ignored
+`.local/agent-note/` and use `pending`, `reviewed`, and short-lived `retired`
+states. They are non-authoritative context: durable outcomes belong in the
+Project Record or the document that owns the subject. Machine configuration
+remains in ignored `config/host.yaml`, and runtime state remains in ignored
+`.runtime/`. These locations are not public project authority.

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import hashlib
+from contextlib import redirect_stdout
+import io
 import json
 import os
 from pathlib import Path
@@ -10,6 +12,7 @@ import subprocess
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from orca_memory.backup import (
     BackupBlockedError,
@@ -20,6 +23,7 @@ from orca_memory.backup import (
     verify_backup,
 )
 from orca_memory.runtime import SCOPE_CHOICE_SCHEMA, SOURCE_CURSOR_SCHEMA
+from orca_memory.cli import main
 
 
 class _FakeGpg:
@@ -44,6 +48,52 @@ def _write_json(path: Path, value: object) -> None:
 
 
 class BackupTests(unittest.TestCase):
+    def test_cli_recovers_without_loading_missing_or_invalid_host_configuration(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            vault, runtime, output = self._roots(root)
+            fake = _FakeGpg()
+            created = create_backup(
+                vault, runtime, recipient="test@example.invalid",
+                output_path=output, command_runner=fake,
+            )
+            invalid = root / "invalid.yaml"
+            invalid.write_text("not: [valid YAML", encoding="utf-8")
+            for host in (root / "missing.yaml", invalid):
+                def run(command: list[str], **kwargs):
+                    if command[:1] == ["git"]:
+                        return subprocess.CompletedProcess(command, 1, "", "")
+                    return fake(command)
+
+                with (
+                    self.subTest(host=host.name),
+                    patch("orca_memory.cli.load_configuration", side_effect=AssertionError("loaded live config")),
+                    patch("orca_memory.backup.subprocess.run", side_effect=run),
+                ):
+                    result = io.StringIO()
+                    with redirect_stdout(result):
+                        self.assertEqual(main([
+                            "--host-config", str(host), "backup", "verify", "--source", str(output),
+                        ]), 0)
+                    self.assertEqual(json.loads(result.getvalue())["manifest_sha256"], created.manifest_sha256)
+                    staging = root / (host.stem + "-staging")
+                    result = io.StringIO()
+                    with redirect_stdout(result):
+                        self.assertEqual(main([
+                            "--host-config", str(host), "backup", "stage", "--standalone",
+                            "--source", str(output), "--destination", str(staging),
+                        ]), 0)
+                    self.assertFalse(json.loads(result.getvalue())["live_state_changed"])
+                    self.assertEqual(
+                        (staging / "vault/System/Orca Memory/memory.md").read_bytes(),
+                        (vault / "System/Orca Memory/memory.md").read_bytes(),
+                    )
+                    with self.assertRaisesRegex(BackupError, "must not already exist"):
+                        main([
+                            "--host-config", str(host), "backup", "stage", "--standalone",
+                            "--source", str(output), "--destination", str(staging),
+                        ])
+
     def _roots(self, root: Path) -> tuple[Path, Path, Path]:
         vault = root / "vault"
         runtime = root / "runtime"
@@ -261,6 +311,106 @@ class BackupTests(unittest.TestCase):
                     runtime_root=runtime,
                     command_runner=fake,
                 )
+
+    def test_staging_rejects_configured_and_detected_worktree_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            vault, runtime, output = self._roots(root)
+            fake = _FakeGpg()
+            create_backup(
+                vault,
+                runtime,
+                recipient="owner@example.invalid",
+                output_path=output,
+                command_runner=fake,
+            )
+
+            project = root / "project"
+            project.mkdir()
+            with self.assertRaisesRegex(BackupError, "outside protected roots"):
+                decrypt_backup_to_staging(
+                    output,
+                    staging_path=project / "nested-restore",
+                    project_roots=(project,),
+                    command_runner=fake,
+                )
+
+            project_link = root / "project-link"
+            project_link.symlink_to(project, target_is_directory=True)
+            with self.assertRaisesRegex(BackupError, "outside protected roots"):
+                decrypt_backup_to_staging(
+                    output,
+                    staging_path=project_link / "symlinked-restore",
+                    project_roots=(project,),
+                    command_runner=fake,
+                )
+
+            git_root = root / "git-root"
+            subprocess.run(
+                ["git", "init", "--quiet", str(git_root)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            with self.assertRaisesRegex(BackupError, "outside protected roots"):
+                decrypt_backup_to_staging(
+                    output,
+                    staging_path=git_root / "git-restore",
+                    command_runner=fake,
+                )
+
+            with patch("orca_memory.backup.tempfile.tempdir", str(git_root)):
+                with self.assertRaisesRegex(
+                    BackupError, "temporary backup workspace overlaps a Git worktree"
+                ):
+                    create_backup(
+                        vault,
+                        runtime,
+                        recipient="owner@example.invalid",
+                        output_path=root / "second-backup.gpg",
+                        command_runner=fake,
+                    )
+
+            empty_marker_root = root / "empty-marker-root"
+            (empty_marker_root / ".git").mkdir(parents=True)
+            staged = decrypt_backup_to_staging(
+                output,
+                staging_path=empty_marker_root / "restore",
+                command_runner=fake,
+            )
+            shutil.rmtree(staged)
+
+            partial_marker_root = root / "partial-marker-root"
+            (partial_marker_root / ".git").mkdir(parents=True)
+            (partial_marker_root / ".git" / "HEAD").write_text(
+                "ref: refs/heads/main\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(BackupError, "ambiguous Git worktree marker"):
+                decrypt_backup_to_staging(
+                    output,
+                    staging_path=partial_marker_root / "restore",
+                    command_runner=fake,
+                )
+
+            linked_root = root / "linked-root"
+            linked_root.mkdir()
+            linked_gitdir = root / "linked-gitdir"
+            linked_gitdir.mkdir()
+            (linked_root / ".git").write_text(
+                f"gitdir: {linked_gitdir}\n", encoding="utf-8"
+            )
+            with self.assertRaisesRegex(BackupError, "outside protected roots"):
+                decrypt_backup_to_staging(
+                    output,
+                    staging_path=linked_root / "restore",
+                    command_runner=fake,
+                )
+
+            with patch("orca_memory.backup.tempfile.tempdir", str(git_root)):
+                with self.assertRaisesRegex(
+                    BackupError, "temporary verification workspace overlaps a Git worktree"
+                ):
+                    decrypt_backup_to_staging(output, command_runner=fake)
 
     def test_tampered_payload_fails_before_staging_is_exposed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

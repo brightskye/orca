@@ -183,6 +183,125 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaisesRegex(ConfigurationError, "outside the vault"):
                 self._load(host_path)
 
+    def test_vault_and_rollouts_must_be_outside_configured_project_root(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_path, host, vault = self._fixture(root)
+            project = root / "project"
+            project.mkdir()
+
+            nested_vault = project / "private-vault"
+            (nested_vault / "System/Orca Memory").mkdir(parents=True)
+            (nested_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            host["vault_path"] = str(nested_vault)
+            host["project_root_mappings"] = [
+                {"root": str(project), "project_id": "proj_test"}
+            ]
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "vault_path must be outside"):
+                self._load(host_path)
+
+            outside_vault = Path(host["vault_path"]).parent.parent / "outside-vault"
+            (outside_vault / "System/Orca Memory").mkdir(parents=True)
+            (outside_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            host["vault_path"] = str(outside_vault)
+            host["connectors"]["codex"]["rollout_store"] = str(project / "rollouts")
+            (project / "rollouts").mkdir()
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "rollout_store must be outside"):
+                self._load(host_path)
+
+    def test_vault_inside_symlinked_or_detected_git_worktree_fails(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_path, host, vault = self._fixture(root)
+            project = root / "project"
+            project.mkdir()
+
+            actual_vault = project / "actual-vault"
+            (actual_vault / "System/Orca Memory").mkdir(parents=True)
+            (actual_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            symlinked_vault = root / "vault-link"
+            symlinked_vault.symlink_to(actual_vault, target_is_directory=True)
+            host["vault_path"] = str(symlinked_vault)
+            host["project_root_mappings"] = [
+                {"root": str(project), "project_id": "proj_test"}
+            ]
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "vault_path must be outside"):
+                self._load(host_path)
+
+            subprocess.run(
+                ["git", "init", "--quiet", str(project / "git-root")],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            git_root = project / "git-root"
+            nested_git_vault = git_root / "private-vault"
+            (nested_git_vault / "System/Orca Memory").mkdir(parents=True)
+            (nested_git_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            host["vault_path"] = str(nested_git_vault)
+            host["project_root_mappings"] = []
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "vault_path must be outside"):
+                self._load(host_path)
+
+            partial_root = project / "partial-root"
+            (partial_root / ".git").mkdir(parents=True)
+            (partial_root / ".git" / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+            partial_vault = partial_root / "private-vault"
+            (partial_vault / "System/Orca Memory").mkdir(parents=True)
+            (partial_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            host["vault_path"] = str(partial_vault)
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "ambiguous Git worktree marker"):
+                self._load(host_path)
+
+            linked_root = project / "linked-root"
+            linked_root.mkdir()
+            linked_gitdir = root / "linked-gitdir"
+            linked_gitdir.mkdir()
+            (linked_root / ".git").write_text(
+                f"gitdir: {linked_gitdir}\n", encoding="utf-8"
+            )
+            linked_vault = linked_root / "private-vault"
+            (linked_vault / "System/Orca Memory").mkdir(parents=True)
+            (linked_vault / "System/Orca Memory/orca-memory.yaml").write_text(
+                yaml.safe_dump(vault, sort_keys=False), encoding="utf-8"
+            )
+            host["vault_path"] = str(linked_vault)
+            self._write_host(host_path, host)
+            with self.assertRaisesRegex(ConfigurationError, "vault_path must be outside"):
+                self._load(host_path)
+
+    def test_runtime_may_remain_inside_detected_git_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            host_path, host, _ = self._fixture(root)
+            git_root = root / "git-root"
+            subprocess.run(
+                ["git", "init", "--quiet", str(git_root)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            runtime = git_root / ".runtime"
+            runtime.mkdir()
+            host["runtime_path"] = str(runtime)
+            self._write_host(host_path, host)
+            self.assertEqual(self._load(host_path).host.runtime_path, runtime.resolve())
+
     def test_vault_configuration_symlink_cannot_escape_the_vault(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -5,7 +5,10 @@ from contextlib import redirect_stdout
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -13,6 +16,7 @@ from unittest.mock import patch
 import yaml
 
 from orca_memory.application import LocalOrcaApplication
+from orca_memory.backup import BackupError
 from orca_memory.candidates import CandidateProposal, KnowledgeCandidate, candidate_placement
 from orca_memory.cli import main
 from orca_memory.configuration import load_configuration
@@ -26,7 +30,12 @@ from orca_memory.interaction import InteractionScope, ObservationProposal
 from orca_memory.memory import MemoryRecord, parse_record, record_relative_path
 from orca_memory.owner_review import OwnerReviewPublisher
 from orca_memory.processor import ContinuationSummary, ProcessingProposal
-from orca_memory.retrieval import RecallRequest
+from orca_memory.retrieval import (
+    ProjectionSource,
+    RecallRequest,
+    RetrievalValidationError,
+    rebuild_projection_index,
+)
 from orca_memory.runtime import LocalRuntime
 from orca_memory.storage import MemoryScope
 
@@ -146,6 +155,128 @@ def _configuration(
 
 
 class ApplicationTests(unittest.TestCase):
+    def test_cli_staging_keeps_configured_live_roots_protected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            configuration = _configuration(root, adapter="codex-cli")
+            archive = root / "backup.gpg"
+            archive.write_bytes(b"unused encrypted input")
+            archive.chmod(0o600)
+            for live_root in (configuration.host.vault_path, configuration.host.runtime_path):
+                with self.subTest(root=live_root.name), patch(
+                    "orca_memory.backup._run_gpg", side_effect=AssertionError("decrypted into live root")
+                ):
+                    with self.assertRaisesRegex(BackupError, "outside protected roots"):
+                        main([
+                            "--host-config", str(root / "host.yaml"), "backup", "stage",
+                            "--source", str(archive), "--destination", str(live_root / "restore"),
+                        ])
+
+    @unittest.skipUnless(os.environ.get("ORCA_RUN_GPG_DRILL") == "1", "opt-in real GPG recovery drill")
+    def test_cli_real_gpg_recovery_after_installation_loss(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="orca-recovery-drill-") as directory:
+            root = Path(directory)
+            original = root / "original"
+            original.mkdir()
+            configuration = _configuration(original, adapter="codex-cli")
+            app = LocalOrcaApplication(configuration, _Provider())
+            self.assertEqual(app.process(_batch(), scope=MemoryScope("general", "general")).status, "success")
+            app.recover_and_rebuild()
+            expected = {
+                path.relative_to(configuration.host.vault_path).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                for path in configuration.host.vault_path.rglob("*") if path.is_file()
+            }
+            keyring = original / "keyring"
+            recovered_keys = root / "recovered-keys"
+            empty_keys = root / "empty-keys"
+            for key_dir in (keyring, recovered_keys, empty_keys):
+                key_dir.mkdir(mode=0o700)
+            environment = dict(os.environ, GNUPGHOME=str(keyring))
+            environment.pop("ORCA_VAULT_PATH", None)
+            recipient = "orca-recovery-test@example.invalid"
+
+            def run(arguments, *, env=environment, check=True):
+                return subprocess.run(arguments, cwd=root, env=env, check=check,
+                                      capture_output=True, text=True, timeout=60)
+
+            def cli(arguments, *, env=environment, check=True):
+                return run([sys.executable, "-m", "orca_memory.cli", *arguments], env=env, check=check)
+
+            archive = root / "backup.gpg"
+            recovery_key = root / "recovery-key.gpg"
+            try:
+                run(["gpg", "--batch", "--pinentry-mode", "loopback", "--passphrase", "",
+                     "--quick-generate-key", recipient, "rsa2048", "encr", "1d"])
+                run(["gpg", "--batch", "--output", str(recovery_key), "--export-secret-keys", recipient])
+                recovery_key.chmod(0o600)
+                created = json.loads(cli([
+                    "--host-config", str(original / "host.yaml"), "backup", "create",
+                    "--recipient", recipient, "--output", str(archive),
+                ]).stdout)
+                run(["gpgconf", "--kill", "gpg-agent"])
+                original.rename(root / "offline-original")
+                recovered_env = dict(environment, GNUPGHOME=str(recovered_keys))
+                run(["gpg", "--batch", "--import", str(recovery_key)], env=recovered_env)
+                # No host config argument: the default config and original paths are absent.
+                verified = json.loads(cli(["backup", "verify", "--source", str(archive)], env=recovered_env).stdout)
+                self.assertTrue(verified["verified"])
+                self.assertEqual(verified["manifest_sha256"], created["manifest_sha256"])
+                staging = root / "recovered"
+                staged = json.loads(cli([
+                    "backup", "stage", "--standalone", "--source", str(archive),
+                    "--destination", str(staging),
+                ], env=recovered_env).stdout)
+                self.assertFalse(staged["live_state_changed"])
+                restored = staging / "vault"
+                self.assertEqual(expected, {
+                    path.relative_to(restored).as_posix(): hashlib.sha256(path.read_bytes()).hexdigest()
+                    for path in restored.rglob("*") if path.is_file()
+                })
+                self.assertEqual(staging.stat().st_mode & 0o777, 0o700)
+                for path in staging.rglob("*"):
+                    if path.is_file():
+                        self.assertEqual(path.stat().st_mode & 0o777, 0o600)
+                runtime = root / "new-runtime"
+                rollouts = root / "new-rollouts"
+                runtime.mkdir()
+                rollouts.mkdir()
+                host = root / "new-host.yaml"
+                host.write_text(yaml.safe_dump({
+                    "schema_version": 1, "host_id": "synthetic-host", "runtime": "wsl",
+                    "vault_path": str(restored), "runtime_path": str(runtime),
+                    "connectors": {"codex": {"rollout_store": str(rollouts)}},
+                    "project_root_mappings": [],
+                }), encoding="utf-8")
+                cli(["--host-config", str(host), "rebuild"], env=recovered_env)
+                recalled = json.loads(cli([
+                    "--host-config", str(host), "recall", "governed local runtime", "--scope", "general",
+                ], env=recovered_env).stdout)
+                self.assertTrue(recalled["results"])
+                self.assertIn("governed local runtime", json.dumps(recalled))
+                for result in recalled["results"]:
+                    self.assertEqual(result["source_sha256"], expected[result["path"]])
+                    self.assertTrue((restored / result["path"]).is_file())
+                corrupted = root / "damaged.gpg"
+                corrupted.write_bytes(archive.read_bytes()[:32])
+                corrupted.chmod(0o600)
+                for source, env in ((corrupted, recovered_env), (archive, dict(environment, GNUPGHOME=str(empty_keys)))):
+                    with self.subTest(source=source.name, keyring=env["GNUPGHOME"]):
+                        self.assertNotEqual(cli(["backup", "verify", "--source", str(source)], env=env, check=False).returncode, 0)
+                        failed = root / "failed-staging"
+                        self.assertNotEqual(cli([
+                            "backup", "stage", "--standalone", "--source", str(source),
+                            "--destination", str(failed),
+                        ], env=env, check=False).returncode, 0)
+                        self.assertFalse(failed.exists())
+                # Rebuild and failed recovery attempts must leave restored source bytes intact.
+                self.assertEqual(expected, {
+                    name: hashlib.sha256((restored / name).read_bytes()).hexdigest() for name in expected
+                })
+            finally:
+                for key_dir in (root / "offline-original/keyring", keyring, recovered_keys, empty_keys):
+                    if key_dir.exists():
+                        run(["gpgconf", "--kill", "gpg-agent"], env=dict(environment, GNUPGHOME=str(key_dir)), check=False)
+
     def test_clean_local_process_restart_guidance_recall_and_rebuild(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -167,7 +298,7 @@ class ApplicationTests(unittest.TestCase):
                 startup.guidance,
                 "For status updates, keep the response concise and omit nonessential background.",
             )
-            recalled = first.recall(RecallRequest(question="governed local runtime"))
+            recalled = first.recall(RecallRequest(question="governed local runtime", scope="general"))
             self.assertTrue(recalled.results)
             self.assertEqual(recalled.results[0].authority, "noncanonical")
 
@@ -233,6 +364,55 @@ class ApplicationTests(unittest.TestCase):
                     self.assertEqual(main(common + command), 0)
                 self.assertTrue(output.getvalue().strip())
             self.assertTrue((root / "runtime/retrieval/index.json").is_file())
+
+    def test_cli_recall_uses_mapped_workspace_or_explicit_scope(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            configuration = _configuration(root)
+            common = ["--host-config", str(root / "host.yaml"),
+                      "--registered-adapter", "fake-local"]
+            projects = []
+            for alias in ("Orchard", "Workshop"):
+                workspace = root / alias
+                workspace.mkdir()
+                (workspace / ".git").mkdir()
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    main(common + ["project", "register", "--root", str(workspace), "--alias", alias])
+                projects.append((workspace, json.loads(output.getvalue())["project_id"]))
+            scopes = [("project", identity) for _, identity in projects]
+            scopes.extend((("general", "general"), ("unassigned", "unassigned")))
+            sources = []
+            for index, (scope, identity) in enumerate(scopes):
+                path = f"System/Orca Memory/shallow/mem_scope_{index}.md"
+                body = f"Orchard planning context number {index}."
+                source_path = configuration.host.vault_path / path
+                source_path.parent.mkdir(parents=True, exist_ok=True)
+                source_path.write_text(body, encoding="utf-8")
+                sources.append(ProjectionSource(
+                    path=path, source_text=body, meaning=body,
+                    artifact_kind="typed-memory-record", authority="noncanonical",
+                    scope=scope, scope_id=identity, status="current",
+                    projection_id=f"mem_scope_{index}", memory_id=f"mem_scope_{index}",
+                ))
+            rebuild_projection_index(sources, runtime_root=configuration.host.runtime_path)
+            for workspace, flags, expected in (
+                (projects[0][0], [], "mem_scope_0"),
+                (projects[1][0], [], "mem_scope_1"),
+                (root, ["--scope", "general"], "mem_scope_2"),
+                (root, ["--scope", "unassigned"], "mem_scope_3"),
+            ):
+                with self.subTest(expected=expected):
+                    output = io.StringIO()
+                    with patch("orca_memory.cli.Path.cwd", return_value=workspace), redirect_stdout(output):
+                        self.assertEqual(main(common + ["recall", "Orchard planning", *flags]), 0)
+                    self.assertEqual(
+                        [item["memory_id"] for item in json.loads(output.getvalue())["results"]],
+                        [expected],
+                    )
+            with patch("orca_memory.cli.Path.cwd", return_value=root):
+                with self.assertRaises(RetrievalValidationError):
+                    main(common + ["recall", "Orchard planning"])
 
     def test_cli_records_explicit_general_scope_choice(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

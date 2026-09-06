@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 import os
 from pathlib import Path
 import re
+import stat
 from typing import Any
 
 import yaml
@@ -260,6 +261,16 @@ def _validate_host(value: Mapping[str, Any], *, env_vault: str | None) -> HostCo
         )
         seen_roots.add(mapping.normalized_root)
         mappings.append(mapping)
+
+    private_roots = tuple(mapping.normalized_root for mapping in mappings)
+    for path in (vault_path, rollout_store):
+        worktree_root = _git_worktree_root(path)
+        if worktree_root is not None:
+            private_roots += (worktree_root,)
+    for boundary in private_roots:
+        _require_outside_root(boundary, vault_path, "vault_path")
+        _require_outside_root(boundary, rollout_store, "connectors.codex.rollout_store")
+
     return HostConfiguration(
         HOST_SCHEMA,
         host_id,
@@ -539,6 +550,89 @@ def _require_outside(vault: Path, candidate: Path, label: str) -> None:
         raise ConfigurationError(f"{label} must be outside the vault")
 
 
+def _require_outside_root(boundary: Path, candidate: Path, label: str) -> None:
+    """Reject private state at or below one project or Git root."""
+
+    if candidate == boundary or boundary in candidate.parents:
+        raise ConfigurationError(f"{label} must be outside the project checkout")
+
+
+def _git_worktree_root(path: Path) -> Path | None:
+    """Find one valid Git worktree boundary containing ``path``.
+
+    An empty ``.git`` directory is ignored because it is not enough evidence
+    of a checkout.  A linked-worktree ``.git`` file and a normal marker with
+    its core entries are accepted.  A partial or unreadable marker fails
+    closed so a private path is never accepted on uncertain evidence.
+    """
+
+    probe = path
+    while not probe.exists() and not probe.is_symlink() and probe != probe.parent:
+        probe = probe.parent
+    for candidate in (probe, *probe.parents):
+        marker = candidate / ".git"
+        try:
+            marker_info = marker.lstat()
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise ConfigurationError("cannot inspect Git worktree boundary") from exc
+        if stat.S_ISLNK(marker_info.st_mode):
+            try:
+                marker = marker.resolve(strict=True)
+                marker_info = marker.stat()
+            except OSError as exc:
+                raise ConfigurationError("Git worktree marker is unreadable") from exc
+        if stat.S_ISREG(marker_info.st_mode):
+            try:
+                lines = marker.read_text(encoding="utf-8").splitlines()
+            except (OSError, UnicodeError) as exc:
+                raise ConfigurationError("Git worktree marker is unreadable") from exc
+            if len(lines) != 1 or not lines[0].startswith("gitdir: "):
+                raise ConfigurationError("ambiguous Git worktree marker")
+            raw_gitdir = lines[0][len("gitdir: ") :].strip()
+            if not raw_gitdir or "\x00" in raw_gitdir:
+                raise ConfigurationError("ambiguous Git worktree marker")
+            gitdir = Path(raw_gitdir)
+            if not gitdir.is_absolute():
+                gitdir = candidate / gitdir
+            try:
+                if not gitdir.resolve(strict=True).is_dir():
+                    raise ConfigurationError("Git worktree marker is unreadable")
+            except OSError as exc:
+                raise ConfigurationError("Git worktree marker is unreadable") from exc
+            try:
+                return Path(os.path.normcase(str(candidate.resolve(strict=True))))
+            except OSError as exc:
+                raise ConfigurationError("Git worktree root is unreadable") from exc
+        if not stat.S_ISDIR(marker_info.st_mode):
+            raise ConfigurationError("ambiguous Git worktree marker")
+
+        expected = {"HEAD": stat.S_ISREG, "config": stat.S_ISREG,
+                    "objects": stat.S_ISDIR, "refs": stat.S_ISDIR}
+        present = False
+        valid = True
+        found: set[str] = set()
+        for name, kind in expected.items():
+            entry = marker / name
+            try:
+                info = entry.lstat()
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                raise ConfigurationError("Git worktree marker is unreadable") from exc
+            present = True
+            found.add(name)
+            valid = valid and not stat.S_ISLNK(info.st_mode) and kind(info.st_mode)
+        if not present:
+            continue
+        if not valid or found != set(expected):
+            raise ConfigurationError("ambiguous Git worktree marker")
+        try:
+            return Path(os.path.normcase(str(candidate.resolve(strict=True))))
+        except OSError as exc:
+            raise ConfigurationError("Git worktree root is unreadable") from exc
+    return None
 def _require_under(vault: Path, candidate: Path, label: str) -> None:
     try:
         resolved = candidate.resolve(strict=False)

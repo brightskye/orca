@@ -72,6 +72,8 @@ class Step3Pipeline:
                 source_segments=new_segments,
                 preceding_turn=preceding_context,
                 project_summary=self._storage.load_project_summary(scope),
+                related_records=self._storage.load_related_records(scope),
+                related_candidates=self._storage.load_related_candidates(scope),
                 budgets=budgets,
             )
             results.append(self._storage.publish(processed, scope=scope))

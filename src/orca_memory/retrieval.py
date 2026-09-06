@@ -668,7 +668,7 @@ AgentCairnAdapter = AgentCairnRetrievalAdapter
 
 @dataclass(frozen=True)
 class RecallRequest:
-    """Explicit user-invoked Recall request and hard-filter context."""
+    """Owner- or agent-initiated Recall request and hard-filter context."""
 
     question: str
     project_id: str | None = None
@@ -826,6 +826,24 @@ class RecallService:
         project_id = self._resolve_project(request)
         exact_key = request.exact_conversation or _conversation_key(request.question)
         exact_projection = self._exact_projection(exact_key)
+        if project_id is not None and request.scope not in {None, "project"}:
+            raise RetrievalValidationError("Recall scope and project disagree")
+        if exact_projection is not None and (
+            (request.scope is not None and request.scope != exact_projection.scope)
+            or (
+                project_id is not None
+                and (exact_projection.scope != "project" or exact_projection.scope_id != project_id)
+            )
+        ):
+            raise RetrievalValidationError("Recall scope and exact conversation disagree")
+        if (
+            project_id is None
+            and request.scope not in {"general", "unassigned"}
+            and exact_projection is None
+        ):
+            raise RetrievalValidationError(
+                "Recall requires a project, explicit general/unassigned scope, or known exact conversation"
+            )
         eligible = tuple(
             projection
             for projection in self._index.projections
@@ -848,6 +866,13 @@ class RecallService:
         if hits is None:
             raise RetrievalValidationError("retrieval adapter returned no ranking sequence")
         ranked = self._validate_and_order_hits(hits, eligible)
+        if exact_projection is not None and exact_projection in eligible:
+            # Reserve the handoff budget for the requested conversation before related hits.
+            exact_hit = next(
+                (item for item in ranked if item[0] == exact_projection),
+                (exact_projection, 1.0),
+            )
+            ranked = [exact_hit, *(item for item in ranked if item[0] != exact_projection)]
         selected, collapsed = self._collapse(ranked)
         results, budget_omitted = self._make_results(
             selected,
@@ -1033,7 +1058,11 @@ class RecallService:
             if cap <= 0:
                 omitted.append("total token limit")
                 continue
-            excerpt = _select_excerpt(projection.meaning, question, cap)
+            if exact and projection.artifact_kind == "conversation-continuation":
+                # An exact handoff needs its state and next steps, not a search snippet.
+                excerpt = _truncate_words(projection.meaning, cap)
+            else:
+                excerpt = _select_excerpt(projection.meaning, question, cap)
             if not excerpt:
                 omitted.append("irrelevant excerpt")
                 continue

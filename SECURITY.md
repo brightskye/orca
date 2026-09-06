@@ -2,9 +2,9 @@
 
 ## Supported state
 
-Orca Memory has an active but incomplete Phase 1 local implementation. It is not
-deployed or offered as a publicly supported service, and canonical automatic
-apply remains disabled.
+Orca targets local Phase 1 use and is not offered as a publicly supported
+service. [Current](docs/project-record/current.md) owns support limitations,
+deployment state, and unresolved readiness findings.
 
 ## Reporting a vulnerability
 
@@ -17,8 +17,8 @@ details that expose a deployed system.
 
 Accepted assets, trust boundaries, threats, deployment restrictions, secret
 containment, logging, and residual risks are defined by [Security and
-Trust](docs/02-architecture/security-and-trust.md). Exact privacy and authority
+Trust](docs/architecture/README.md#security-and-trust). Exact privacy and authority
 behavior remains governed by the [Memory System
-Contract](docs/governance/memory-system-contract.md). See [Current
-Status](docs/STATUS.md) for implementation gaps; documented design is not proof
-of deployed protection.
+Contract](docs/specifications/memory-system-contract.md). See [Current](docs/project-record/current.md)
+for implementation limits; documented design is not proof of deployed
+protection.

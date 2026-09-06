@@ -88,6 +88,8 @@ class ConflictProposal:
     position: str
     position_at: str | None
     target_variant_id: str | None = None
+    # Deterministic current-run segment locators supplied by the provider.
+    source_segment_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not isinstance(self.target_memory_id, str) or _SAFE_ID.fullmatch(self.target_memory_id) is None:
@@ -98,6 +100,14 @@ class ConflictProposal:
         _timestamp(self.position_at, "position_at")
         if self.target_variant_id is not None and _VARIANT_ID.fullmatch(self.target_variant_id) is None:
             raise MemoryValidationError("invalid target_variant_id")
+        if not isinstance(self.source_segment_refs, (tuple, list)):
+            raise MemoryValidationError("source_segment_refs must be a sequence")
+        refs = tuple(self.source_segment_refs)
+        if any(not isinstance(ref, str) or not ref.strip() for ref in refs):
+            raise MemoryValidationError("source_segment_refs must contain non-empty strings")
+        if len(set(refs)) != len(refs):
+            raise MemoryValidationError("source_segment_refs must be unique")
+        object.__setattr__(self, "source_segment_refs", refs)
 
 
 @dataclass(frozen=True)
@@ -114,6 +124,8 @@ class SupersedeProposal:
     context: str | None = None
     implications: str | None = None
     explicit_replacement: bool = True
+    # Deterministic current-run segment locators supplied by the provider.
+    source_segment_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.explicit_replacement:
@@ -127,6 +139,14 @@ class SupersedeProposal:
         if self.implications is not None:
             _text(self.implications, "superseding implications")
         _timestamp(self.source_updated_at, "source_updated_at")
+        if not isinstance(self.source_segment_refs, (tuple, list)):
+            raise MemoryValidationError("source_segment_refs must be a sequence")
+        refs = tuple(self.source_segment_refs)
+        if any(not isinstance(ref, str) or not ref.strip() for ref in refs):
+            raise MemoryValidationError("source_segment_refs must contain non-empty strings")
+        if len(set(refs)) != len(refs):
+            raise MemoryValidationError("source_segment_refs must be unique")
+        object.__setattr__(self, "source_segment_refs", refs)
 
 
 @dataclass(frozen=True)

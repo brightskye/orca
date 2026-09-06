@@ -1,13 +1,10 @@
 config/host.yaml
 .runtime/
 .venv/
-.agent-notes/
 __pycache__/
 *.pyc
 
 # Local historical records include raw source material, private operational
 # metadata, third-party content, and generated caches. They are intentionally
 # outside the public repository.
-/archive/
-/evidence/
-/index.md
+/.local/

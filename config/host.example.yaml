@@ -1,4 +1,4 @@
-# Accepted Phase 1 fixture; see docs/03-specifications/configuration.md.
+# Accepted Phase 1 fixture; see docs/specifications/configuration.md.
 schema_version: 1
 host_id: replace-with-unique-host-id
 runtime: wsl

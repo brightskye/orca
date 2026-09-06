@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 from pathlib import Path
+import shlex
 import subprocess
 import tempfile
 import unittest
@@ -166,34 +167,37 @@ def _payload(event: str, rollout: Path, cwd: Path) -> dict[str, object]:
 
 class CodexHookTests(unittest.TestCase):
     def test_example_hook_configuration_is_bounded(self) -> None:
+        """Keep review templates valid without mutating an installed hook layer."""
         repository_root = Path(__file__).resolve().parents[2]
-        example_path = repository_root / "config" / "codex-hooks.example.json"
-        installed_path = repository_root / ".codex" / "hooks.json"
-        configuration = json.loads(example_path.read_text(encoding="utf-8"))
-
-        self.assertEqual(
-            json.loads(installed_path.read_text(encoding="utf-8")),
-            configuration,
-        )
-        self.assertEqual(
-            set(configuration["hooks"]),
-            {"SessionStart", "PreCompact", "SessionEnd"},
-        )
         expected = {
-            "SessionStart": ("startup|resume|compact", 10),
+            "SessionStart": ("startup|resume|clear|compact", 10),
             "PreCompact": ("manual|auto", 10),
-            "SessionEnd": ("other", 10),
+            "SessionEnd": ("other", 3),
         }
-        for event, (matcher, timeout) in expected.items():
-            entry = configuration["hooks"][event][0]
-            command = entry["hooks"][0]
-            self.assertEqual(entry["matcher"], matcher)
-            self.assertEqual(command["type"], "command")
-            self.assertEqual(command["timeout"], timeout)
-            self.assertEqual(
-                command["command"],
-                'uv run --project "$(git rev-parse --show-toplevel)" orca-codex-hook',
-            )
+        examples = {
+            "project": (
+                repository_root / "config" / "codex-hooks.example.json",
+                'uv run --project "$(git rev-parse --show-toplevel)" --no-sync orca-codex-hook',
+            ),
+            "user": (
+                repository_root / "config" / "codex-hooks.user.example.json",
+                'test -n "$ORCA_CHECKOUT" && test -f "$ORCA_CHECKOUT/pyproject.toml" && test -f "$ORCA_HOST_CONFIG" && uv run --project "$ORCA_CHECKOUT" --no-sync orca-codex-hook',
+            ),
+        }
+        for name, (example_path, expected_command) in examples.items():
+            with self.subTest(name=name):
+                configuration = json.loads(example_path.read_text(encoding="utf-8"))
+                self.assertEqual(
+                    set(configuration["hooks"]),
+                    {"SessionStart", "PreCompact", "SessionEnd"},
+                )
+                for event, (matcher, timeout) in expected.items():
+                    entry = configuration["hooks"][event][0]
+                    command = entry["hooks"][0]
+                    self.assertEqual(entry["matcher"], matcher)
+                    self.assertEqual(command["type"], "command")
+                    self.assertEqual(command["timeout"], timeout)
+                    self.assertEqual(command["command"], expected_command)
 
     def test_disabled_lifecycle_noops_before_transcript_access_or_redaction(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -285,13 +289,15 @@ class CodexHookTests(unittest.TestCase):
     def test_mapped_working_directory_queues_project_scope(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / ".git").mkdir()
-            host_path = _configuration(root, mapped_root=root)
+            project_root = root / "project"
+            project_root.mkdir()
+            (project_root / ".git").mkdir()
+            host_path = _configuration(root, mapped_root=project_root)
             rollout = root / "rollouts" / "hook.jsonl"
             _write_rollout(rollout)
 
             handle_payload(
-                _payload("PreCompact", rollout, root),
+                _payload("PreCompact", rollout, project_root),
                 environ={"ORCA_HOST_CONFIG": str(host_path)},
                 spawn=lambda *args, **kwargs: object(),
             )
@@ -331,14 +337,16 @@ class CodexHookTests(unittest.TestCase):
     def test_project_mapping_takes_precedence_over_general_choice(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / ".git").mkdir()
-            host_path = _configuration(root, mapped_root=root)
+            project_root = root / "project"
+            project_root.mkdir()
+            (project_root / ".git").mkdir()
+            host_path = _configuration(root, mapped_root=project_root)
             rollout = root / "rollouts" / "hook.jsonl"
             _write_rollout(rollout)
             LocalRuntime(root / "runtime").set_scope_choice("hook-session", "general")
 
             handle_payload(
-                _payload("PreCompact", rollout, root),
+                _payload("PreCompact", rollout, project_root),
                 environ={"ORCA_HOST_CONFIG": str(host_path)},
                 spawn=lambda *args, **kwargs: object(),
             )
@@ -523,24 +531,50 @@ class CodexHookTests(unittest.TestCase):
             )
             application.return_value.startup.assert_called_once()
 
-    def test_session_start_accepts_official_compact_source_without_transcript(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            host_path = _configuration(root)
-            value = _payload("SessionStart", root / "missing.jsonl", root)
-            value["source"] = "compact"
-            value["transcript_path"] = None
-            startup = StartupContext("", None, OrcaStatus(()))
-            with patch("orca_memory.codex_hook.LocalOrcaApplication") as application:
-                application.return_value.startup.return_value = startup
-                self.assertEqual(
-                    handle_payload(
-                        value,
-                        environ={"ORCA_HOST_CONFIG": str(host_path)},
-                    ),
-                    "",
-                )
-                application.return_value.startup.assert_called_once()
+    def test_session_start_exposes_scoped_recall_without_reading_history(self) -> None:
+        for scope in ("project", "general", "unassigned"):
+            with self.subTest(scope=scope), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                workspace = root / "workspace with spaces"
+                workspace.mkdir()
+                (workspace / ".git").mkdir()
+                host_path = _configuration(root, mapped_root=workspace if scope == "project" else None)
+                if scope == "general":
+                    LocalRuntime(root / "runtime").set_scope_choice("hook-session", "general")
+                payload = _payload("SessionStart", root / "missing.jsonl", workspace)
+                payload["transcript_path"] = None
+                with patch("orca_memory.codex_hook.normalize_codex_rollout", side_effect=AssertionError("startup read history")):
+                    context = handle_payload(payload, environ={"ORCA_HOST_CONFIG": str(host_path)})
+                if scope == "unassigned":
+                    self.assertEqual(context, "")
+                else:
+                    command = next(line for line in context.splitlines() if "orca_memory.cli" in line)
+                    arguments = shlex.split(command)
+                    self.assertEqual(arguments[arguments.index("--host-config") + 1], str(host_path))
+                    option, value = ("--project-id", "proj_orca") if scope == "project" else ("--scope", "general")
+                    self.assertEqual(arguments[arguments.index(option) + 1], value)
+                    self.assertEqual(arguments[arguments.index("recall") + 1], "<memory question>")
+                self.assertFalse((root / "runtime/retrieval/index.json").exists())
+
+    def test_session_start_accepts_official_clear_and_compact_sources_without_transcript(self) -> None:
+        for source in ("clear", "compact"):
+            with self.subTest(source=source), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                host_path = _configuration(root)
+                value = _payload("SessionStart", root / "missing.jsonl", root)
+                value["source"] = source
+                value["transcript_path"] = None
+                startup = StartupContext("", None, OrcaStatus(()))
+                with patch("orca_memory.codex_hook.LocalOrcaApplication") as application:
+                    application.return_value.startup.return_value = startup
+                    self.assertEqual(
+                        handle_payload(
+                            value,
+                            environ={"ORCA_HOST_CONFIG": str(host_path)},
+                        ),
+                        "",
+                    )
+                    application.return_value.startup.assert_called_once()
 
     def test_transcript_outside_configured_store_is_rejected_without_spawn(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

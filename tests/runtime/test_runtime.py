@@ -13,6 +13,7 @@ from orca_memory.conversation import ConversationBatch, NormalizedTurn
 from orca_memory.retry import create_retry_spool
 from orca_memory.runtime import LocalRuntime, WorkItem
 from orca_memory.attention import collect_attention
+from orca_memory.segmentation import BudgetConfig, measure_context
 
 
 def _batch() -> ConversationBatch:
@@ -196,13 +197,14 @@ class RuntimeTests(unittest.TestCase):
 
     def test_duplicate_hook_queues_once_and_worker_cleans_success(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
-            runtime = LocalRuntime(Path(directory))
+            created = datetime(2026, 8, 30, tzinfo=timezone.utc)
+            runtime = LocalRuntime(Path(directory), clock=lambda: created)
             first = runtime.enqueue_session_end(
-                _batch(), now=datetime(2026, 8, 30, tzinfo=timezone.utc),
+                _batch(), now=created,
                 scope_kind="unassigned", scope_id="unassigned",
             )
             second = runtime.enqueue_session_end(
-                _batch(), now=datetime(2026, 8, 30, tzinfo=timezone.utc),
+                _batch(), now=created,
                 scope_kind="unassigned", scope_id="unassigned",
             )
             calls = []
@@ -233,6 +235,24 @@ class RuntimeTests(unittest.TestCase):
             status = collect_attention(root / "vault", root)
             self.assertEqual(status.items[0].item_class, "failed-operation")
             self.assertNotIn("private failure", status.render())
+
+    def test_terminal_budget_failure_records_category_without_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = LocalRuntime(root, max_attempts=1)
+            runtime.enqueue_pointer(
+                trigger="explicit-save", connector_id="codex-local",
+                conversation_id="conversation-runtime", source_path=root / "rollout.jsonl",
+                start_offset=0, scope_kind="general", scope_id="general",
+            )
+            def fail(item, batch):
+                measure_context(semantic_output="private model response").validate(
+                    BudgetConfig(semantic_output_tokens=1)
+                )
+            self.assertEqual(runtime.run_once(fail), "failed")
+            receipt = next((root / "receipts").glob("failure-*.json")).read_text()
+            self.assertEqual(json.loads(receipt)["failure_code"], "output-budget")
+            self.assertNotIn("private model response", receipt)
 
     def test_lock_contention_and_idle_make_no_handler_call(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

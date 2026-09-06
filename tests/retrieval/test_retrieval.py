@@ -157,6 +157,56 @@ class RetrievalTests(unittest.TestCase):
         self.assertNotIn("mem_private", str(response))
         self.assertNotIn("wrong-project", str(response))
 
+    def test_scope_is_required_and_enforced_before_ranking(self):
+        exact = projection_from_conversation(
+            conversation_id="conversation_one",
+            structural_id="conv:orca--abc123",
+            path="System/Orca Memory/conversation-summaries/conversation_one.md",
+            source_text="# Conversation\n\nCurrent deployment plan.",
+            meaning="Current deployment plan.",
+            scope="project",
+            scope_id="proj_orca",
+        )
+        sources = (
+            _source("orca-record", "Orca database settings"),
+            _source("other-record", "Other project architecture", scope_id="proj_other"),
+            _source("general-record", "General gardening notes", scope="general", scope_id="general"),
+            _source("unassigned-record", "Unassigned reading notes", scope="unassigned", scope_id="unassigned"),
+        )
+        index = ProjectionIndex((exact, *ProjectionIndex.rebuild(sources).projections))
+        invalid = (
+            {},
+            {"scope": "project"},
+            {"scope": "general", "project_id": "proj_orca"},
+            {"scope": "unassigned", "project_id": "proj_orca"},
+            {"scope": "general", "exact_conversation": exact.structural_id},
+            {"project_id": "proj_other", "exact_conversation": exact.structural_id},
+            {"exact_conversation": "conv:missing--abc123"},
+        )
+        for fields in invalid:
+            with self.subTest(invalid=fields):
+                adapter = RecordingAdapter()
+                with self.assertRaises(RetrievalValidationError):
+                    RecallService(index, adapter).recall(RecallRequest(question="notes", **fields))
+                self.assertEqual(adapter.seen, ())
+
+        scoped = (
+            ({"project_id": "proj_orca"}, {exact.projection_id, "orca-record"}),
+            ({"scope": "project", "project_id": "proj_other"}, {"other-record"}),
+            ({"scope": "general"}, {"general-record"}),
+            ({"scope": "unassigned"}, {"unassigned-record"}),
+            ({"exact_conversation": exact.structural_id}, {exact.projection_id, "orca-record"}),
+        )
+        for fields, expected in scoped:
+            with self.subTest(scoped=fields):
+                adapter = RecordingAdapter()
+                response = RecallService(index, adapter).recall(RecallRequest(question="notes", **fields))
+                self.assertEqual(set(adapter.seen), expected)
+                self.assertEqual(
+                    {item.path for item in response.results},
+                    {item.path for item in index.projections if item.projection_id in expected},
+                )
+
     def test_canonical_first_only_within_relevance_tie(self):
         sources = (
             _source("shallow-strong", "deployment policy strong shallow"),
@@ -175,7 +225,7 @@ class RetrievalTests(unittest.TestCase):
             {"shallow-strong": 0.95, "canonical-tie": 0.93, "canonical-weak": 0.20}
         )
         response = RecallService(ProjectionIndex.rebuild(sources), adapter).recall(
-            RecallRequest(question="deployment policy")
+            RecallRequest(question="deployment policy", project_id="proj_orca")
         )
         self.assertEqual(
             [item.path for item in response.results],
@@ -199,7 +249,7 @@ class RetrievalTests(unittest.TestCase):
         )
         adapter = RecordingAdapter({source.projection_id: 1.0 for source in sources})
         response = RecallService(ProjectionIndex.rebuild(sources), adapter).recall(
-            RecallRequest(question="deployment policy")
+            RecallRequest(question="deployment policy", project_id="proj_orca")
         )
         self.assertLessEqual(len(response.results), MAX_RESULTS)
         self.assertIn("duplicate identity", response.omitted)
@@ -252,6 +302,66 @@ class RetrievalTests(unittest.TestCase):
         self.assertTrue(any(item.artifact_kind == "project-summary" for item in response.results))
         self.assertEqual(response.results[0].structural_id, "conv:orca--abc123")
 
+    def test_exact_conversation_preserves_continuation_within_configured_budgets(self):
+        meaning = (
+            "# Orchard plan\n\n## Current state\n\nWe chose apple trees.\n\n"
+            "## Next steps\n\nOrder six saplings.\n\n## Important outcomes\n\n"
+            + " ".join(f"detail{index}" for index in range(100))
+        )
+        projection = projection_from_conversation(
+            conversation_id="conversation_orchard",
+            structural_id="conv:orchard-plan--abc123",
+            path="System/Orca Memory/conversation-summaries/orchard-plan--abc123.md",
+            source_text=meaning,
+            meaning=meaning,
+            scope="general",
+            scope_id="general",
+        )
+        for total, exact_cap in ((200, 150), (100, 40), (45, 80)):
+            with self.subTest(total_tokens=total, exact_continuation_tokens=exact_cap):
+                service = RecallService(
+                    ProjectionIndex((projection,)),
+                    RecordingAdapter(),
+                    total_tokens=total,
+                    per_document_tokens=20,
+                    exact_continuation_tokens=exact_cap,
+                )
+                response = service.recall(RecallRequest(question=projection.structural_id))
+                excerpt = response.results[0].excerpt
+                self.assertIn("We chose apple trees.", excerpt)
+                self.assertIn("Order six saplings.", excerpt)
+                self.assertLessEqual(len(excerpt.split()), exact_cap)
+                self.assertLessEqual(len(excerpt.split()) + 12, total)
+                if total == 200:
+                    self.assertEqual(excerpt, meaning)
+
+                ordinary = service.recall(RecallRequest(question="apple trees", scope="general"))
+                self.assertEqual(ordinary.results[0].excerpt, "We chose apple trees.")
+
+    def test_exact_conversation_precedes_ranked_references_with_real_adapter(self):
+        meaning = "# Garden decisions\n\nWe chose apple trees.\n\nOrder six saplings."
+        exact = projection_from_conversation(
+            conversation_id="conversation_garden",
+            structural_id="conv:orchard-plan--abc123",
+            path="System/Orca Memory/conversation-summaries/orchard-plan--abc123.md",
+            source_text=meaning,
+            meaning=meaning,
+            scope="project",
+            scope_id="proj_orca",
+        )
+        reference = build_projection(_source(
+            "apple-record",
+            "See conv:orchard-plan--abc123 for the planting discussion.",
+            memory_id="mem_apple",
+        ))
+        assert reference is not None
+        response = RecallService(
+            ProjectionIndex((exact, reference)), AgentCairnRetrievalAdapter.local()
+        ).recall(RecallRequest(question=exact.structural_id, max_results=1))
+        self.assertEqual(len(response.results), 1)
+        self.assertEqual(response.results[0].structural_id, exact.structural_id)
+        self.assertEqual(response.results[0].excerpt, meaning)
+
     def test_agentcairn_adapter_is_replaceable_and_cannot_return_ineligible_items(self):
         projection = build_projection(_source("allowed", "safe deployment policy"))
         assert projection is not None
@@ -263,7 +373,7 @@ class RetrievalTests(unittest.TestCase):
 
         adapter = AgentCairnRetrievalAdapter(ranker)
         response = RecallService(ProjectionIndex((projection,)), adapter).recall(
-            RecallRequest(question="deployment policy")
+            RecallRequest(question="deployment policy", project_id="proj_orca")
         )
         self.assertEqual(response.results[0].path, projection.path)
         self.assertEqual(calls, [("deployment policy", ("allowed",), 1)])
@@ -274,7 +384,7 @@ class RetrievalTests(unittest.TestCase):
         with self.assertRaises(RetrievalValidationError):
             RecallService(
                 ProjectionIndex((projection,)), AgentCairnRetrievalAdapter(malicious)
-            ).recall(RecallRequest(question="deployment policy"))
+            ).recall(RecallRequest(question="deployment policy", project_id="proj_orca"))
 
     def test_governed_local_agentcairn_ranks_only_prefiltered_projections(self):
         allowed = build_projection(_source("allowed-local", "deployment policy for Orca"))
@@ -304,7 +414,7 @@ class RetrievalTests(unittest.TestCase):
             total_tokens=100,
             per_document_tokens=50,
             exact_continuation_tokens=80,
-        ).recall(RecallRequest(question="deployment"))
+        ).recall(RecallRequest(question="deployment", project_id="proj_orca"))
         self.assertEqual(len(response.results), 1)
         self.assertLessEqual(len(response.results[0].excerpt.split()), 50)
         self.assertLessEqual(len(response.results[0].excerpt.split()) + 12, 100)

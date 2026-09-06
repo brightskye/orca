@@ -109,6 +109,7 @@ _PROPOSAL_KEYS = frozenset(
         "implications",
         "final",
         "closure",
+        "source_segment_refs",
     }
 )
 _PROVIDER_OWNED_KEYS = frozenset(
@@ -665,6 +666,9 @@ class RecordProposal:
     implications: str | None = None
     final: str | None = None
     closure: str | None = None
+    # Provider citations use the current run's deterministic segment locator
+    # (``<turn_id>#<segment_index>``).  Storage turns these into Manifest refs.
+    source_segment_refs: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if self.operation not in MEMORY_OPERATIONS:
@@ -688,6 +692,13 @@ class RecordProposal:
             self.source_updated_at, "source_updated_at", nullable=True
         )
         workstreams = _validate_workstreams(self.workstreams, scope)
+        if not isinstance(self.source_segment_refs, (tuple, list)):
+            _fail("source_segment_refs must be a sequence")
+        refs = tuple(self.source_segment_refs)
+        if any(not isinstance(ref, str) or not ref.strip() for ref in refs):
+            _fail("source_segment_refs must contain non-empty strings")
+        if len(set(refs)) != len(refs):
+            _fail("source_segment_refs must be unique")
         current, context, implications, final, closure = _validate_sections(
             status=self.status,
             current=self.current,
@@ -700,6 +711,7 @@ class RecordProposal:
         object.__setattr__(self, "scope_id", scope_id)
         object.__setattr__(self, "source_updated_at", source_updated_at)
         object.__setattr__(self, "workstreams", workstreams)
+        object.__setattr__(self, "source_segment_refs", refs)
         for name, value in (
             ("current", current),
             ("context", context),
@@ -780,6 +792,7 @@ _PROPOSAL_FIELDS = (
     "implications",
     "final",
     "closure",
+    "source_segment_refs",
 )
 
 

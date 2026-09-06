@@ -4,7 +4,7 @@ This directory contains the Orca-owned code and rules used by the current
 manual/local shared-memory prototype. It remains relevant until verified
 cutover, but its planning-phase layout is not the accepted target architecture.
 
-Use the archived [all-phase system overview](../../../docs/_archive/legacy-design/system-overview.md)
+Use the archived [all-phase system overview](../../../docs/archive/legacy-design/system-overview.md)
 for historical design context.
 
 ```text

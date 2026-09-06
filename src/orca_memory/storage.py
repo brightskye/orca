@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -41,7 +41,11 @@ from orca_memory.memory import (
 )
 from orca_memory.interaction import parse_observation, rebuild_profiles
 from orca_memory.privacy import contains_secret
-from orca_memory.processor import ContinuationSummary, ProcessedConversation
+from orca_memory.processor import (
+    ContinuationSummary,
+    ProcessedConversation,
+    source_segment_ref,
+)
 from orca_memory.provenance import (
     CHECKPOINT_SCHEMA,
     MANIFEST_SCHEMA,
@@ -239,6 +243,40 @@ class Storage:
         )
         return path.read_text(encoding="utf-8") if path.is_file() else None
 
+    def load_related_records(self, scope: MemoryScope) -> tuple[MemoryRecord | ConflictRecord, ...]:
+        """Load current same-scope records for the next bounded provider call."""
+
+        records = self._memory_records()
+        return tuple(
+            sorted(
+                (
+                    record
+                    for record in records.values()
+                    if record.scope == scope.kind
+                    and record.scope_id == scope.scope_id
+                    and record.status == "current"
+                ),
+                key=lambda record: record.memory_id,
+            )
+        )
+
+    def load_related_candidates(self, scope: MemoryScope) -> tuple[KnowledgeCandidate, ...]:
+        """Load pending same-scope candidates for exact support targeting."""
+
+        candidates = self._knowledge_candidates()
+        return tuple(
+            sorted(
+                (
+                    candidate
+                    for candidate in candidates.values()
+                    if candidate.scope == scope.kind
+                    and candidate.scope_id == scope.scope_id
+                    and candidate.status == "pending"
+                ),
+                key=lambda candidate: candidate.candidate_id,
+            )
+        )
+
     def publish(
         self,
         processed: ProcessedConversation,
@@ -254,6 +292,27 @@ class Storage:
             segmented_source(segment, source_ref=f"src-{index:03d}")
             for index, segment in enumerate(processed.source_segments, start=1)
         ]
+        segment_refs = [source_segment_ref(segment) for segment in processed.source_segments]
+        if len(set(segment_refs)) != len(segment_refs):
+            raise ValueError("Manifest source segment locators are not unique")
+        source_refs_by_segment = {
+            segment_ref: source["source_ref"]
+            for segment_ref, source in zip(segment_refs, sources)
+        }
+        source_by_ref = {
+            source["source_ref"]: source for source in sources
+        }
+
+        def exact_source_refs(refs: tuple[str, ...], label: str) -> list[str]:
+            if not refs:
+                raise ValueError(f"{label} must cite at least one source segment")
+            try:
+                mapped = [source_refs_by_segment[ref] for ref in refs]
+            except KeyError as exc:
+                raise ValueError(f"{label} cites a missing source segment") from exc
+            if any(source_by_ref[ref].get("source_role") != "owner" for ref in mapped):
+                raise ValueError(f"{label} must cite Owner source segments")
+            return mapped
         owner_source_refs = [
             source["source_ref"]
             for source in sources
@@ -401,7 +460,9 @@ class Storage:
                     "outcome": outcome,
                     "artifact_kind": "typed-memory-record",
                     "artifact_id": memory_id,
-                    "source_refs": owner_source_refs,
+                    "source_refs": exact_source_refs(
+                        proposal.source_segment_refs, "record proposal"
+                    ),
                     "output_refs": output_refs,
                     "embedded_artifact": None,
                 }
@@ -434,7 +495,9 @@ class Storage:
                     "outcome": "updated",
                     "artifact_kind": "typed-memory-record",
                     "artifact_id": post_image.memory_id,
-                    "source_refs": owner_source_refs,
+                    "source_refs": exact_source_refs(
+                        replacement.source_segment_refs, "supersede proposal"
+                    ),
                     "output_refs": [output_ref] if output_ref else [],
                     "embedded_artifact": None,
                 }
@@ -456,7 +519,9 @@ class Storage:
                         "outcome": "supported",
                         "artifact_kind": "conflict-overflow-candidate",
                         "artifact_id": overflow_id,
-                        "source_refs": owner_source_refs,
+                        "source_refs": exact_source_refs(
+                            conflict.source_segment_refs, "conflict proposal"
+                        ),
                         "output_refs": [],
                         "embedded_artifact": None,
                     }
@@ -501,7 +566,9 @@ class Storage:
                     "outcome": outcome,
                     "artifact_kind": "typed-memory-record",
                     "artifact_id": post_image.memory_id,
-                    "source_refs": owner_source_refs,
+                    "source_refs": exact_source_refs(
+                        conflict.source_segment_refs, "conflict proposal"
+                    ),
                     "output_refs": output_refs,
                     "embedded_artifact": None,
                 }
@@ -525,7 +592,9 @@ class Storage:
                         "outcome": "conflict-recorded",
                         "artifact_kind": "conflict-overflow-candidate",
                         "artifact_id": overflow_id,
-                        "source_refs": owner_source_refs,
+                        "source_refs": exact_source_refs(
+                            conflict.source_segment_refs, "conflict proposal"
+                        ),
                         "output_refs": [overflow_ref] if overflow_ref else [],
                         "embedded_artifact": None,
                     }
@@ -570,7 +639,9 @@ class Storage:
                     "outcome": outcome,
                     "artifact_kind": "knowledge-candidate",
                     "artifact_id": candidate_id,
-                    "source_refs": owner_source_refs,
+                    "source_refs": exact_source_refs(
+                        instruction.source_segment_refs, "candidate instruction"
+                    ),
                     "output_refs": output_refs,
                     "embedded_artifact": None,
                 }
@@ -584,15 +655,19 @@ class Storage:
                         "material project-memory change requires a Project Summary refresh"
                     )
                 project_summary_output = self._prepare_project_summary(
-                    processed.project_summary,
+                    _include_changed_memory_ids(
+                        processed.project_summary, changed_record_ids
+                    ),
                     scope=scope,
                     records=existing_records,
                     required_memory_ids=tuple(changed_record_ids),
                 )
             elif processed.project_summary is not None:
                 raise ValueError("Project Summary is not allowed outside project scope")
-        elif processed.project_summary is not None:
-            raise ValueError("support or no-change cannot refresh Project Summary")
+        elif processed.project_summary is not None and scope.kind != "project":
+            raise ValueError("Project Summary is not allowed outside project scope")
+        # Support-only and no-change runs keep the existing Project Summary.
+        # A redundant proposal must not block independent continuation capture.
 
         if processed.continuation is not None:
             path = self._continuation_path(
@@ -1072,6 +1147,23 @@ def _render_continuation(
             lines.extend(("", f"## {heading}", ""))
             lines.extend(f"- {value.strip()}" for value in values)
     return "\n".join(lines) + "\n"
+
+
+def _include_changed_memory_ids(
+    summary: ProjectSummary, changed_memory_ids: list[str]
+) -> ProjectSummary:
+    """Attach Storage-assigned IDs to a validated Project Summary.
+
+    Providers cannot know IDs allocated later in the same publication.  Keep
+    their validated summary meaning and append each changed record identity in
+    deterministic publication order before Storage resolves links.
+    """
+
+    existing = list(summary.relevant_memory_ids)
+    for memory_id in changed_memory_ids:
+        if memory_id not in existing:
+            existing.append(memory_id)
+    return replace(summary, relevant_memory_ids=tuple(existing), body=None)
 
 
 def _slug(value: str) -> str:
