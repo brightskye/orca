@@ -85,8 +85,9 @@ identity rather than add a duplicate projection.
 3. Ordinary Recall includes `current`, MAY include visibly labelled `conflict`,
    and MUST exclude `closed` unless the request explicitly asks for historical,
    completed, resolved, or closed memory.
-4. Candidates, Run Manifests, `Raw/`, `Inbox/`, `Archive/`, and transient
-   Conversation Evidence MUST remain outside ordinary Recall.
+4. Candidates, Run Manifests, `Inbox/` (including `Raw/` and `Notes/` intake),
+   `Archive/`, and transient Conversation Evidence MUST remain outside ordinary
+   Recall.
 5. The Adapter ranks only permitted projections against the explicit requested
    meaning. It cannot broaden scope, change meaning, select a conflict winner,
    or grant authority.

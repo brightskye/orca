@@ -138,7 +138,7 @@ that an optional long-context extension is available.
 
 ## Sources
 
-- [Orca handoff skill](/mnt/c/Users/kyh82/.codex/skills/handoff/SKILL.md)
+- Local Orca handoff skill (`handoff/SKILL.md`; reviewed locally, not published)
 - [Meta Llama model overview](https://github.com/meta-llama/llama-models)
 - [Meta Llama 4 announcement](https://ai.meta.com/blog/llama-4-multimodal-intelligence/)
 - [Qwen3 model card](https://huggingface.co/Qwen/Qwen3-32B)

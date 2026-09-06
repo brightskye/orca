@@ -163,6 +163,8 @@ Scenario definitions and verdicts remain in the
 | `tests/runtime/test_codex_hook.py` | 14 | AGENTS and CI | Official lifecycle payloads, deterministic scope resolution, default-off no-op before transcript access, source containment, mandatory redacted handoff, cursor-aware replay, exact worker settings, safe failures, scoped recall instructions without startup search, and hook configuration |
 | `tests/acceptance/test_readiness_boundaries.py` | 7 | AGENTS and CI | Frozen corpus distribution and digests, selector-backed execution, fail-closed scoring, separate edge set, and negative canonical/public surface |
 | `tests/acceptance/test_semantic_evaluation.py` | 5 | AGENTS and CI | Strict synthetic semantic manifest, separate usefulness/validity/safety scoring, allowed extras, content-safe failures, and immutable result retention |
+| `tests/packaging/test_release.py` | 24 | CI and command below | Bundle integrity, one-folder installation, preserved existing host settings, safely quoted paths, internal physical skills with discovery links, retained installer, explicit vault binding and scaffold preflight, and conflicting destination protection |
+| `tests/packaging/test_vault_scaffold.py` | 9 | CI and command below | Fresh-only portable vault scaffolding, tentative rules, disabled default policy, release integrity, and unsafe destination/resource rejection |
 
 This inventory records the suites and their intended coverage. The canonical
 command below is the current regression baseline; its test count changes when
@@ -171,7 +173,8 @@ end-to-end acceptance.
 
 ## Current and target commands
 
-AGENTS and CI use the canonical active-suite command:
+The canonical active-suite command extends the AGENTS implementation list
+with the deployment installer checks also run by CI:
 
 ```bash
 UV_CACHE_DIR=/tmp/orca-uv-cache \
@@ -204,16 +207,44 @@ uv run --extra agentcairn python -m unittest \
   tests/runtime/test_codex_hook.py \
   tests/acceptance/test_readiness_boundaries.py \
   tests/acceptance/test_semantic_evaluation.py \
-  tests/agentcairn/test_distiller.py
+  tests/agentcairn/test_distiller.py \
+  tests/packaging/test_release.py \
+  tests/packaging/test_vault_scaffold.py
 ```
 
 The full command with both `ORCA_RUN_GPG_DRILL=1` and
-`ORCA_RUN_CODEX_ISOLATION_DRILL=1` passed 259 tests on 2026-09-06 after the
-controlled-trial repairs. Without those flags, the two integration drills are skipped
-and the remaining 257 cases form the deterministic baseline. The drills add
+`ORCA_RUN_CODEX_ISOLATION_DRILL=1` passed 263 tests on 2026-09-06 after the
+controlled-trial repairs and packaging checks. Without those flags, the two integration drills are skipped
+and the remaining 261 cases form the deterministic baseline. The drills add
 real encryption/recovery and actual Codex executable isolation evidence; they
 do not establish complete Phase 1 acceptance, private deployed-vault recovery,
 or a live semantic or two-session lifecycle canary.
+
+After packaged-skill deployment was added on the same date, the canonical
+command ran 271 tests successfully: 269 passed and the two opt-in integration
+drills were skipped. Their runtime implementations were unchanged by that work.
+
+The earlier local package verification additionally installed the extracted release from outside
+the checkout, then masks both checkout and extracted bundle during runtime
+checks. It exercises installed configuration commands, deterministic synthetic
+publication, rebuilt exact scoped recall, and generated SessionStart hooks.
+Skill packaging checks compare wheel resources with their maintained sources
+and installed agent copies, then read the installed resources with the checkout
+and extracted bundle hidden. These checks prove runtime/resource independence;
+they are not a new live-model or Desktop test.
+
+CI now builds the actual archive from a clean checkout and runs
+`python3 tests/packaging/check_bundle.py /absolute/release.tar.gz`. This installs
+into disposable locations, checks wheel resources and skill links, runs the
+installed CLI, and verifies a synthetic vault move. Tag publication uses that
+same tested archive and checksums. The two opt-in drills remain separate from
+ordinary CI; no release check uses private vault data or a real model.
+The additional local `--mask-source` option requires bubblewrap and hides the
+checkout and extracted download while disabling network access. It checks the
+installed CLI, scoped recall, and retained vault scaffolder in that environment.
+
+The self-contained installer and vault-scaffold changes passed all 292 active
+tests on 2026-09-06 with both opt-in integration drills enabled.
 
 New deterministic Phase 1 suites must be added to this command and CI as their
 milestones land. A later quality update may replace explicit paths with

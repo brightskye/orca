@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orca Conversation"
+  short_description: "Save or resume governed conversation context"
+  default_prompt: "Use $orca-conversation to recall the relevant context and resume our discussion."

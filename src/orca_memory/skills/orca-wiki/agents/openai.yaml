@@ -1,0 +1,4 @@
+interface:
+  display_name: "Orca Wiki"
+  short_description: "Capture sources and maintain accepted wiki notes"
+  default_prompt: "Use $orca-wiki to save this material to the appropriate Orca intake folder."

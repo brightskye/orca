@@ -1,0 +1,45 @@
+name: Publish WSL prerelease
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: ./.github/workflows/ci.yml
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wsl-release
+          path: release
+      - name: Publish the tested package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          cat > release-notes.md <<'NOTES'
+          A self-contained Orca package for controlled testing on Linux/WSL.
+
+          The program, Python environment, host settings, runtime state, skills,
+          and retained installer stay in one installation folder. Optional vault
+          scaffolding creates a separate vault with tentative system rules and
+          automatic capture disabled. The vault location is configurable.
+
+          Download the tar.gz and SHA256SUMS, verify the checksum, extract the
+          archive, and follow its README.md. Python 3.11+ and uv are required;
+          installation downloads pinned dependencies. Existing vaults are preserved.
+
+          This prerelease does not enable routine private capture. Controlled
+          Codex Desktop lifecycle verification remains outstanding.
+          NOTES
+          gh release create "$GITHUB_REF_NAME" release/*/*.tar.gz release/*/SHA256SUMS \
+            --verify-tag --prerelease --title "Orca $GITHUB_REF_NAME — controlled testing" \
+            --notes-file release-notes.md

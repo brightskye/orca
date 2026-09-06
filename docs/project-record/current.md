@@ -48,12 +48,116 @@ repairs and retests are recorded below;
 the working tree is not approved for routine private capture.
 The existing private lifecycle configuration remains disabled.
 
+## Self-contained release and starter vault — 2026-09-06
+
+The Owner requested publication of a self-contained Orca package and an optional
+starter vault. The installer now keeps the Python environment, commands, host
+configuration, private runtime, physical skills, dependency cache, and complete
+release bundle in one selected installation folder. External agent discovery
+entries are symlinks to its skills. An explicitly selected existing host file
+remains supported and preserved.
+
+The optional vault scaffold creates a separate, configurable vault with
+relative links, system navigation, tentative local rules, accepted-knowledge
+folders, and pending intake. It refuses an existing destination. The starter
+policy keeps lifecycle disabled. Program updates do not replace vault rules.
+The [setup guide](../operations/setup.md#starter-vault-and-its-location) owns
+creation and move procedures. Existing private vaults, runtime state, skills,
+and active hooks were not upgraded by this package work.
+
+The active suite passed all 292 tests with the real synthetic GPG recovery and
+Codex executable isolation drills enabled. The real archive installed in a
+disposable folder, validated its resources and skill links, published synthetic
+noncanonical conversation memory, and recalled it before and after moving the
+vault. With checkout and extracted download hidden and networking disabled,
+installed Recall and the retained vault scaffolder passed. A real-wheel folder
+entry defect found by that check was fixed and added to the fixture coverage.
+
+The package is prepared for the `v0.1.0` GitHub prerelease for controlled testing.
+The release workflow runs the suite and real archive check before publication.
+Controlled Codex Desktop lifecycle verification and authorization for routine
+private capture remain outstanding; packaging does not change those limits.
+
+## Initial package verification — 2026-09-06
+
+The Owner requested a deployable package independent of the GitHub checkout.
+The `0.1.0` release bundle now includes a wheel, hashed dependency lock, safe
+configuration examples, installer, hook template, setup instructions, and file
+checksums. The installer creates a fresh application directory and launchers
+bound to an external host file (default `~/.config/orca/host.yaml`). It preserves
+existing host settings and does not modify a vault, active Codex hooks, or
+automatic-capture settings. Installation downloads pinned dependencies; an
+offline installer and automatic updater are not included.
+
+The extracted bundle installed from outside the checkout. Runtime verification
+then hid both checkout and extracted bundle and disabled networking: installed
+validate/health/rebuild/status commands passed, deterministic synthetic
+publication and exact scoped recall passed, and the generated SessionStart
+hook returned the installed recall command with the correct project and host
+file. A disabled startup returned no guidance. The test finished with no queued
+work or attention items and lifecycle disabled. This was a package-integration
+test, not another live-model or Desktop lifecycle test.
+
+The full active suite plus four installer regressions passed 263 tests with
+both integration-drill flags. Installer regressions cover corrupt or unexpected
+bundle files, existing-installation protection, preserved configuration, and
+shell quoting of external paths. The initial extra-sandboxed installation probe
+could not execute its newly created interpreter in that sandbox; normal
+installation succeeded and the installed runtime passed the masked-checkout
+probe. No additional runtime change was required.
+
+The original package-verification bundle, before skills were included, is retained
+under `.local/releases/0.1.0-wsl/` with its verification results. Archive SHA-256:
+`772f8b3c12af1ad3c6ff4ff428fd9933b79f5fa39059459106870f8da68ef7f3`.
+It records base revision `7e53c57be199746f971010e4fa2ef37eca084096` and an
+uncommitted working-tree build; the wheel and installer have independent file
+hashes in `release.json`. It has not been installed into the private deployment
+or published remotely. Controlled Desktop verification remains outstanding.
+The [setup guide](../operations/setup.md#install-the-packaged-wsl-release) owns
+installation and activation steps.
+
+## Agent skills and vault intake — 2026-09-06
+
+The Owner approved two separate agent workflows. Maintained sources now live in
+[`src/orca_memory/skills/orca-conversation/`](../../src/orca_memory/skills/orca-conversation/SKILL.md) and
+[`src/orca_memory/skills/orca-wiki/`](../../src/orca_memory/skills/orca-wiki/SKILL.md). The local Codex copies are
+installed and match those sources. [Setup](../operations/setup.md#agent-skills)
+owns installation and binding guidance. The Owner clarified that both skills
+must ship with Orca: they now belong to the runtime package as resources and
+the WSL installer deploys the bundled copies into the agent's skills directory.
+They do not change Phase 1 automatic canonical-apply boundaries.
+
+The configured vault now uses `Inbox/Raw/` for manually added or explicitly
+requested sources and `Inbox/Notes/` for pending captures. Accepted notes retain
+their canonical destinations. The former nightly distillations, Merlin reviews,
+related audit material, and templates are preserved under `Archive/agent-memory/`;
+their vault instructions are retired. External jobs remain unchanged by Owner
+direction. Conversation storage and executable configuration locations are unchanged.
+
+Verification covered moved-file hashes, unchanged governed conversation artifacts,
+active navigation links, skill validation, and installed-copy hashes. An isolated
+agent execution saved a supplied source and tentative idea to their respective
+intake folders, preserved the existing canonical note, and stopped conversation
+saving when its runtime/source binding was absent. This was a documentation,
+migration, and skill check; no live private capture or runtime activation was run.
+The pending deployment/readiness restrictions above remain in force.
+
+The packaging correction passed all 12 installer regressions. The active suite
+ran 271 tests successfully, with the two opt-in GPG/Codex isolation drills skipped
+because their implementation was unchanged. A real standalone installation
+deployed the runtime and both skills from the wheel. With the checkout and
+release bundle hidden and networking disabled, the installed CLI worked and
+all four installed package/agent skill files matched their maintained sources.
+The skill-inclusive bundle is retained under `.local/releases/0.1.0-wsl-with-skills/`.
+This verification used isolated destinations and did not upgrade the private runtime.
+
 ## Capability status
 
 The Owner clarified the Phase 1 goal on 2026-09-05: preserve useful distilled
 conversation history in the Orca vault and recall it across Codex sessions.
 The existing capture → processing → Markdown → retrieval structure is retained.
-No new vault format, retrieval backend, or wiki workflow is introduced.
+Those runtime repairs introduce no new vault format or retrieval backend;
+the manual wiki skill described above remains a separate workflow.
 
 Working-tree adjustments now preserve cumulative continuation context in the
 provider instructions, send only selected source segments, and reject an

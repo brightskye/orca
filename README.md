@@ -29,8 +29,9 @@ knowledge and second brain, and agent memory that preserves conversation
 continuity. This repository implements the agent-memory workstream. Phase 1
 helps the Owner resume discussions and work across Codex sessions using
 distilled conversation history stored in a designated area of the Orca vault.
-The wiki's broader rules and knowledge-distillation workflows will be reviewed
-separately. Conversation memory remains distinct from accepted wiki knowledge.
+The package also includes two portable agent skills: conversation continuity
+through the runtime, and manual wiki capture and curation under the configured
+vault's own rules. Conversation memory remains distinct from accepted wiki knowledge.
 
 This repository contains the active Phase 1 implementation and its supporting
 project material. Private memory, machine runtime state, and development of the
@@ -68,6 +69,16 @@ lifecycle activation, and first-canary procedures. After deployment, use the
 [Runbook](docs/operations/runbook.md) for health, status, Recall, rebuild,
 disablement, troubleshooting, and recovery boundaries.
 
+The [packaged WSL release](docs/operations/setup.md#install-the-packaged-wsl-release)
+keeps the program, environment, host settings, runtime state, skills, and
+installer in one folder. A separate, configurable vault can live where Obsidian
+can use it. The optional starter vault includes tentative system rules.
+Maintainers run `UV_CACHE_DIR=/tmp/orca-uv-cache python3 tools/build_release.py`;
+generated bundles go to ignored `releases/<version>/`. Use `--output` for a new
+custom output directory. Tagging `v<version>` runs the suite and a real bundle
+installation check before publishing a GitHub prerelease. Building or installing
+a bundle does not activate private capture.
+
 The Phase 1 runtime uses local one-shot workers rather than a daemon. Automatic
 Codex lifecycle handling is controlled by the vault's `lifecycle.enabled`
 boolean and always applies local eligibility filtering and Secret Containment
@@ -81,8 +92,11 @@ before provider input. Canonical automatic apply remains unavailable.
 | Where are documentation routes and subject owners? | [Documentation map](docs/README.md) |
 | Where is the installed Orca product implemented? | `src/orca_memory/` |
 | Where are repeatable checks? | `tests/` |
+| Where are release tools and generated packages? | `tools/`; ignored `releases/<version>/` |
+| Where are tentative starter-vault resources? | `src/orca_memory/vault_template/`; [setup](docs/operations/setup.md#starter-vault-and-its-location) |
 | Where are maintained evaluation cases and runners? | `tests/evals/` |
 | Where are safe configuration examples? | `config/`; machine-local values use ignored `config/host.yaml` |
+| Which agent skills handle conversation continuity and wiki work? | [orca-conversation](src/orca_memory/skills/orca-conversation/SKILL.md) and [orca-wiki](src/orca_memory/skills/orca-wiki/SKILL.md); [installation](docs/operations/setup.md#agent-skills) |
 | How is Orca installed and operated? | [Operations](docs/operations/README.md) and [Runbook](docs/operations/runbook.md) |
 | What inactive implementation is retained? | `legacy/manual-prototype/` |
 | Where is private local verification history retained? | Ignored `.local/` |
@@ -95,8 +109,10 @@ public repository.
 
 ## Source boundary
 
-Only code delivered as the supported Orca library, command-line interface,
-hooks, or runtime integrations belongs under `src/orca_memory/`. Repeatable
+Supported Orca library, command-line, hook, and runtime-integration code belongs
+under `src/orca_memory/`, together with its shipped resources. The agent skills
+live in `src/orca_memory/skills/`; tentative vault resources live in
+`src/orca_memory/vault_template/`. Both ship in the runtime wheel. Repeatable
 tests and evaluation-only runners belong under `tests/`; maintained development
 automation belongs under `tools/`; temporary local helpers and output remain
 outside Git. A supported optional integration remains product source even when

@@ -8,3 +8,7 @@ __pycache__/
 # metadata, third-party content, and generated caches. They are intentionally
 # outside the public repository.
 /.local/
+
+# Generated distribution outputs and the locally installed layout skill.
+/releases/
+/.agents/skills/pls/

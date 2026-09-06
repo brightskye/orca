@@ -20,6 +20,42 @@ and recovery, see [Using and maintaining Orca](runbook.md).
 Phase 1 runs locally with one WSL runtime and one vault. It exposes no network
 service and does not enable Canonical Memory changes.
 
+## Agent skills
+
+Two maintained skill directories live under `src/orca_memory/skills/` and are
+included in the Orca wheel:
+
+| Skill | Use | Boundary |
+|---|---|---|
+| [orca-conversation](../../src/orca_memory/skills/orca-conversation/SKILL.md) | Recall or resume scoped discussion context; explicitly save with a verified source binding | Runtime-governed, noncanonical memory; no wiki writes or lifecycle activation |
+| [orca-wiki](../../src/orca_memory/skills/orca-wiki/SKILL.md) | Wiki lookup, requested source/note capture, and authorized distillation or accepted-note updates | Loads the configured vault's rules; pending intake is not accepted knowledge |
+
+The WSL installer keeps both skills inside `<prefix>/skills/` and creates
+discovery symlinks in `$CODEX_HOME/skills/` (or `~/.codex/skills/` when unset).
+Use `--skills-dir` for another discovery directory, including a disposable one
+for tests. Existing same-named copies or links stop installation before writes.
+Preserve and move those entries aside, or choose another directory. Other
+agents need their own skill-discovery integration.
+
+For checkout development, copies may be installed directly from these source
+directories. Release deployments take their skill bytes from the release wheel,
+so they do not depend on a checkout or a separate skill download.
+
+Use natural requests such as “resume our Orca discussion,” “save this article
+to Orca,” or “capture this idea.” Explicit skill names are also available.
+An ambiguous “remember this” requires clarification about the intended outcome.
+The skill cannot supply a missing vault, host, conversation, or project binding.
+An installed runtime launcher or the configured development command must provide
+the conversation interface; ordinary wiki file operations do not require a
+conversation worker.
+
+The vault owns `AGENTS.md` and its delegated operating rules. Its current intake
+routes are `Inbox/Raw/` for explicitly requested sources and `Inbox/Notes/` for
+pending quick captures. Accepted knowledge remains in the canonical folders.
+Conversation artifacts remain under `System/Orca Memory/` and full transcripts
+remain in the agent's source storage. Installing a skill neither enables capture
+nor establishes readiness for routine private processing.
+
 ## Readiness before activation
 
 Read [Current](../project-record/current.md) before deployment or activation.
@@ -28,6 +64,161 @@ acceptance does not clear those findings. The steps below describe the local
 installation procedure and do not establish that its outstanding gaps are fixed.
 
 ## What setup provides
+
+For a deployed installation, use the release bundle below. The later
+checkout-installation instructions remain available for development and the
+earlier controlled CLI procedure.
+
+<!-- release-guide:start -->
+## Install the packaged WSL release
+
+This controlled-testing release runs without a GitHub checkout. It includes
+Orca, both agent skills, a starter vault, the installer, hashed dependency lock,
+safe configuration examples, and hook setup. Python dependencies download during
+installation; this is not an offline installer. Linux/WSL, Python 3.11+, and
+`uv` are required. Live processing also requires the qualified static Codex CLI
+0.153.4, local Codex login, and `bubblewrap`. Optional encrypted backups need
+GPG and your own backup key.
+
+Download the archive and `SHA256SUMS` from the
+[Orca v0.1.0 release](https://github.com/brightskye/orca/releases/tag/v0.1.0),
+then verify and extract them:
+
+```bash
+sha256sum -c SHA256SUMS
+tar -xzf orca-memory-0.1.0-wsl.tar.gz
+cd orca-memory-0.1.0-wsl
+python3 install.py --vault-path /absolute/path/to/Orca --create-vault
+```
+
+Choose a **new** vault path for `--create-vault`. To use an existing vault,
+omit `--create-vault`; its content and settings are preserved. To configure the
+vault later, omit both options. Checksums detect damaged or mismatched files;
+they are not publisher signatures. The installer also verifies the extracted
+bundle before installation.
+
+Everything owned by the installation stays under one folder. The default is
+`~/.local/share/orca/0.1.0/`; use `--prefix /absolute/install/path` to change it.
+The prefix must be new.
+
+| Item | Location inside the installation |
+|---|---|
+| Python environment and Orca | `env/` |
+| Commands | `bin/orca`, `bin/orca-codex-hook` |
+| Host settings | `config/host.yaml` |
+| Private processing state | `runtime/` |
+| Physical agent skills | `skills/orca-conversation/`, `skills/orca-wiki/` |
+| Installer, vault scaffolder, wheel, lock and examples | `package/` |
+| Hook definition to review | `hooks.json` |
+| Dependency download cache | `cache/` |
+
+Only the skill discovery links live outside this folder: `$CODEX_HOME/skills/`,
+or `~/.codex/skills/` when unset. Use `--skills-dir /absolute/agent/skills` to
+choose their location. Existing same-named copies or links stop installation;
+move them aside after review or use a fresh discovery directory. The actual
+skill files come from the verified release wheel and stay inside the prefix.
+The installer leaves active hooks, Codex login/history, and shell profiles alone.
+It does not enable automatic capture.
+
+Fill in your stable host ID and existing Codex rollout store in
+`<prefix>/config/host.yaml`. The installer sets the internal runtime path and,
+when supplied, the vault path. Keep `project_root_mappings: []` for a fresh
+setup. An explicit `--host-config /absolute/existing-host.yaml` supports an
+existing deployment: that file is preserved, including its runtime path and
+project mappings. In that case omit `--vault-path` and use the existing host
+settings. Do not put credentials in either configuration file.
+
+### Starter vault and its location
+
+The vault path is separate from the program. For example, keep Orca in WSL and
+choose a Windows folder such as `/mnt/c/Users/<you>/Documents/Orca` for Obsidian.
+Phase 1 still uses one local runtime and one local vault.
+
+`--create-vault` creates a new vault with `AGENTS.md`, an index, tentative rules
+under `System/`, accepted-knowledge folders (`Knowledge`, `Projects`, `People`,
+`Daily`, `System/Context`), pending intake (`Inbox/Raw`, `Inbox/Notes`), and
+`Archive`. Its `System/Orca Memory/orca-memory.yaml` selects `codex-cli` and
+`gpt-5.6-luna`, with `lifecycle.enabled: false`.
+
+These are starter rules for later review. Installing or updating Orca never
+replaces an existing vault's rules. The scaffolder refuses any existing target,
+including an empty folder, and uses relative links within the new vault.
+It can also be run later from the retained bundle:
+
+```bash
+python3 /absolute/install/path/package/scaffold_vault.py \
+  --vault-path /absolute/new/vault
+```
+
+That command only creates the vault. Set `vault_path` in the host file yourself
+when binding it to an existing installation.
+
+To move the vault later, disable its lifecycle and wait for running work to
+finish. Move the **whole** vault, then change `vault_path` in the host file.
+Remove or update `ORCA_VAULT_PATH` if set; a conflicting value is rejected.
+Preserve host identity, project mappings, and runtime state. Run validation and
+rebuild, then confirm scoped recall and its source references before resuming.
+No reinstall is needed to change the vault path.
+
+### Configure and check
+
+Make the commands available in the current WSL shell:
+
+```bash
+export PATH="$HOME/.local/share/orca/0.1.0/bin:$PATH"
+orca validate
+orca health
+orca rebuild
+orca status
+```
+
+These commands work from any directory and select the installation's host file.
+An explicit `orca --host-config /absolute/test-host.yaml ...` selects a different
+host. `health` checks local state, not model access. Register each intended
+project using its actual folder and a short alias:
+
+```bash
+orca project register --root /absolute/project/folder --alias project-name
+```
+
+For a controlled test, select a disposable prefix, vault, and skills directory.
+After configuration checks pass, review `hooks.json` and copy its Orca entries
+into the disposable project's `.codex/hooks.json`, preserving unrelated hooks.
+Keep only one Orca hook source active. Generated commands use the installed
+program and bound host file directly. Review and trust the exact definitions
+through the Codex CLI's `/hooks` flow. Desktop lifecycle behavior still requires
+a separate controlled check.
+
+Enable the test vault only, capture a short synthetic discussion, end the
+session, and wait for processing. Confirm an empty queue, a saved noncanonical
+summary, and scoped recall in a fresh session. Test both explicit recall and an
+ordinary continuation prompt. Restore the test lifecycle to `false` afterward.
+Do not scan old histories or use the normal private vault for this test.
+A successful installation does not authorize routine capture.
+
+For routine use, review the hook with the normal host file and enable that vault
+only after the controlled Desktop check and Owner authorization. Changing a hook
+requires another trust review. Setting `lifecycle.enabled: false` stops new
+automatic work; an already-running model request cannot be cancelled that way.
+
+### Update an installation
+
+Disable automatic work and let running work finish. Install the new release into
+a new prefix, using a separate skill discovery directory during verification.
+Copy the old host settings and runtime state together into the new prefix, then
+change its `runtime_path` to the copied runtime. Keep the same vault, host ID,
+and project mappings. Validate, rebuild, and check recall before deliberately
+switching PATH, the two discovery links, and the active hook to the new prefix.
+Keep the old folder for rollback. An external `--host-config` remains available
+when deliberately retaining an existing configuration and runtime location.
+
+There is no automatic updater, data migration, or version switch. The complete
+bundle remains under `package/`, so the original extracted download can be
+archived elsewhere. Keep the installed program directory in place: its
+launchers use absolute paths. Vault moves are configured separately as above.
+<!-- release-guide:end -->
+
+### Checkout installation (development)
 
 After setup:
 

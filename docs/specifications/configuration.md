@@ -45,6 +45,18 @@ require validated configuration.
 | Project `project.md` records | Permanent `project_id` and current unique Project Alias | Configured private vault; collectively the Project Registry |
 | Local runtime state | Rebuildable mappings, indexes, locks, queues, checkpoints, retry material, receipts, and content-free conversation-scope choices | Outside vault and Git; never authority for semantic content |
 
+`config/host.yaml` is the checkout CLI default, not a required storage location.
+The deployed launcher explicitly supplies the installer's selected host path
+through `--host-config` (default `<prefix>/config/host.yaml`). Its hook launcher
+supplies the same path through the existing `ORCA_HOST_CONFIG` selector. These
+select the host file; they do not override individual configuration fields or
+change schema precedence. New installations use `<prefix>/runtime/` for private
+state. An explicitly selected existing host file and its runtime path are
+preserved. The vault stays separate and can be moved by updating `vault_path`,
+with lifecycle disabled and runtime state preserved; see [Setup](../operations/setup.md#starter-vault-and-its-location).
+The optional starter vault supplies tentative rules and the existing safe
+policy schema. It never updates an existing vault or enables capture.
+
 Tracked source MUST contain only a safe example. Actual host values,
 credentials, private memory, and generated runtime state MUST NOT be copied into
 the repository.

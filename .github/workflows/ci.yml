@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 
 permissions:
   contents: read
@@ -48,3 +49,28 @@ jobs:
           tests/acceptance/test_readiness_boundaries.py
           tests/acceptance/test_semantic_evaluation.py
           tests/agentcairn/test_distiller.py
+          tests/packaging/test_release.py
+          tests/packaging/test_vault_scaffold.py
+      - name: Build the release bundle
+        env:
+          UV_CACHE_DIR: ${{ runner.temp }}/uv-cache
+        run: |
+          python3 tools/build_release.py
+          python3 - <<'PY'
+          import json, os, pathlib, tomllib
+          version = tomllib.loads(pathlib.Path('pyproject.toml').read_text())['project']['version']
+          if os.environ['GITHUB_REF_TYPE'] == 'tag':
+              assert os.environ['GITHUB_REF_NAME'] == f'v{version}', 'Tag must match project version'
+          manifest = json.loads(pathlib.Path(f'releases/{version}/orca-memory-{version}-wsl/release.json').read_text())
+          assert not manifest['source_dirty'], 'Release must come from a clean checkout'
+          assert manifest['source_revision'] == os.environ['GITHUB_SHA']
+          PY
+      - name: Verify an extracted standalone installation and vault move
+        run: python3 tests/packaging/check_bundle.py releases/*/*.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wsl-release
+          path: |
+            releases/*/*.tar.gz
+            releases/*/SHA256SUMS
+          if-no-files-found: error

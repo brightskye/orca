@@ -55,6 +55,13 @@ Follow the [Setup guide](setup.md#1-install-the-local-environment).
 It installs the local package environment and verifies the tracked project hook
 configuration. It installs no daemon.
 
+The [packaged release](setup.md#install-the-packaged-wsl-release) runs without
+the checkout. With its `bin` directory on PATH, replace `uv run orca` in this
+runbook with `orca`; the launcher selects its bound host file, normally
+`<prefix>/config/host.yaml`. The [setup guide](setup.md#starter-vault-and-its-location)
+also explains creating or moving a separate vault.
+Use `orca --host-config /absolute/test-host.yaml ...` for a separate test host.
+
 ## Configuration
 
 Follow the [Setup guide](setup.md#3-configure-the-host) to create the
